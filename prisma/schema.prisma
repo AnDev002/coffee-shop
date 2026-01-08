@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Enum Role
+enum Role {
+  USER
+  ADMIN
+}
+
+// 2. Enum Status Đơn hàng
+enum OrderStatus {
+  PENDING   // Chờ duyệt
+  PREPARING // Đang pha chế
+  COMPLETED // Hoàn thành
+  CANCELLED // Đã hủy
+}
+
+// 3. Model User (Đã thêm quan hệ orders)
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String
+  role          Role      @default(USER)
+  loyaltyPoints Int       @default(0) 
+  orders        Order[]   // <--- DÒNG NÀY LÀ CÁI BẠN ĐANG THIẾU
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model StoreSettings {
+  id          String   @id @default("default") 
+  storeName   String   @default("Coffee Shop")
+  address     String?
+  hotline     String?
+  openTime    String   @default("07:00")
+  closeTime   String   @default("22:00")
+  wifiPass    String?
+}
+
+// 4. Model Category (Danh mục đồ uống)
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  products  Product[] // Một danh mục có nhiều sản phẩm
+}
+
+// 5. Model Product (Đồ uống)
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  description String?     @db.Text // Cho phép mô tả dài
+  price       Decimal
+  imageUrl    String?
+  isAvailable Boolean     @default(true)
+  
+  categoryId  String
+  category    Category    @relation(fields: [categoryId], references: [id])
+  
+  orderItems  OrderItem[] // Một sản phẩm có thể nằm trong nhiều đơn hàng (chi tiết đơn)
+  
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+// 6. Model Order (Đơn hàng)
+model Order {
+  id          String      @id @default(cuid())
+  
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  
+  status      OrderStatus @default(PENDING)
+  total       Decimal
+  
+  items       OrderItem[]
+  
+  createdAt   DateTime    @default(now())
+}
+
+// 7. Model OrderItem (Chi tiết từng món trong đơn)
+model OrderItem {
+  id        String  @id @default(cuid())
+  
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+  
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  
+  quantity  Int
+  price     Decimal 
+}

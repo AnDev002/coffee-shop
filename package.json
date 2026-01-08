@@ -9,6 +9,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.1",
     "@fullcalendar/core": "^6.1.15",
     "@fullcalendar/daygrid": "^6.1.15",
     "@fullcalendar/interaction": "^6.1.15",
@@ -19,6 +20,7 @@
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.2",
     "@nestjs/config": "^4.0.2",
+    "@prisma/client": "^5.22.0",
     "@react-jvectormap/core": "^1.0.4",
     "@react-jvectormap/world": "^1.1.2",
     "@tailwindcss/forms": "^0.5.9",
@@ -36,8 +38,9 @@
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.553.0",
     "next": "16.0.10",
-    "next-auth": "^4.24.13",
+    "next-auth": "^5.0.0-beta.30",
     "next-themes": "^0.4.6",
+    "prisma": "^5.22.0",
     "react": "^19.2.3",
     "react-apexcharts": "^1.7.0",
     "react-dnd": "^16.0.1",
@@ -55,6 +58,9 @@
     "zod": "^4.1.12",
     "zustand": "^5.0.9"
   },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "devDependencies": {
     "@svgr/webpack": "^8.1.0",
     "@types/leaflet": "^1.9.21",
@@ -67,6 +73,7 @@
     "eslint-config-next": "16.0.7",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.17",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   },
   "overrides": {
