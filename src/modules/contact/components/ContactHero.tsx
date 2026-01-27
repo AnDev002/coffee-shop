@@ -26,10 +26,10 @@ export const ContactHero = () => {
       {/* Title - Contact Information */}
       <div className="absolute inset-0 z-20 flex flex-col items-center justify-center pt-20">
          <h1 className="font-sans text-6xl font-bold text-white uppercase tracking-widest mb-4">
-            Contact Us
+            Liên hệ chúng tôi
          </h1>
          <p className="text-white/70 font-light text-base max-w-2xl text-center">
-            Get in touch with us for any questions or feedback
+            Liên hệ với chúng tôi để nhận được sự hỗ trợ tốt nhất
          </p>
       </div>
 

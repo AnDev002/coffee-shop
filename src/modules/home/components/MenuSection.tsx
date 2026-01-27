@@ -1,70 +1,98 @@
+// src/modules/home/components/MenuSection.tsx
 import React from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { MenuCategory } from '@/actions/menu';
 
-interface MenuItemProps {
-    image: string;
-    title: string;
-    description: string;
-    price: string;
+interface MenuSectionProps {
+  categories: MenuCategory[];
 }
 
-const MENU_ITEMS: MenuItemProps[] = [
-    { 
-        image: "https://images.unsplash.com/photo-1572442388796-11668a67e53d?q=80&w=2000&auto=format&fit=crop", 
-        title: "Coffee Capuccino", 
-        description: "A small river named Duden flows by their place and supplies", 
-        price: "$5.90" 
-    },
-    { 
-        image: "https://images.unsplash.com/photo-1550665648-e99745de0d4c?q=80&w=2000&auto=format&fit=crop", 
-        title: "Hot Cake Honey", 
-        description: "A small river named Duden flows by their place and supplies", 
-        price: "$2.90" 
-    },
-    { 
-        image: "https://images.unsplash.com/photo-1614352723226-80516104c935?q=80&w=2000&auto=format&fit=crop", 
-        title: "Coffee Latte", 
-        description: "A small river named Duden flows by their place and supplies", 
-        price: "$3.45" 
-    },
-    { 
-        image: "https://images.unsplash.com/photo-1629896096530-58992e592737?q=80&w=2000&auto=format&fit=crop", 
-        title: "Ice Coffee", 
-        description: "A small river named Duden flows by their place and supplies", 
-        price: "$4.50" 
-    },
-];
+export const MenuSection: React.FC<MenuSectionProps> = ({ categories }) => {
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  };
 
-const MenuItem = ({ image, title, description, price }: MenuItemProps) => (
-    <div className="flex gap-4 items-start">
-        <img src={image} alt={title} className="w-[80px] h-[80px] rounded-full object-cover flex-shrink-0" />
-        <div className="flex-1">
-            <div className="flex justify-between items-baseline mb-2">
-                <h3 className="text-lg font-medium text-white uppercase">{title}</h3>
-                <span className="text-coffee-primary text-lg font-bold">{price}</span>
-            </div>
-            <p className="text-gray-400 text-sm font-light leading-relaxed line-clamp-2">{description}</p>
-        </div>
-    </div>
-);
-
-export const MenuSection = () => {
   return (
-    <section className="py-20 md:py-32 bg-[#000000] text-white">
-      <div className="max-w-[1140px] mx-auto px-4 text-center">
-        <span className="text-coffee-primary font-serif italic text-3xl block mb-2">Discover</span>
-        <h2 className="text-4xl font-bold uppercase tracking-wider mb-16">Best Coffee Sellers</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-12">
-            {MENU_ITEMS.map((item, idx) => (
-                <MenuItem key={idx} {...item} />
-            ))}
+    <section className="container mx-auto px-4 py-24">
+      {/* [UPDATED] Header Section theo yêu cầu */}
+      {/* [NEW] Container Header - Đồng nhất style với Discover Section */}
+        <div className="container mx-auto max-w-[1140px] px-4 mb-12 md:mb-16">
+            <div className="text-center">
+                {/* Dòng chữ trang trí (Script font) để giống style bên dưới */}
+                <span className="font-serif text-[#c49b63] text-4xl md:text-5xl italic block mb-2">
+                    Khám phá
+                </span>
+                
+                {/* Tiêu đề chính */}
+                <h2 className="text-white text-3xl md:text-5xl font-bold uppercase tracking-wider mb-6">
+                    Thực Đơn
+                </h2>
+                
+                {/* Mô tả */}
+                <p className="text-gray-400 font-light max-w-2xl mx-auto text-sm md:text-base leading-relaxed">
+                    Khám phá thực đơn đa dạng từ những hạt cà phê rang xay thượng hạng đến các món tráng miệng ngọt ngào.
+                </p>
+            </div>
         </div>
-        
-        <div className="mt-16 text-center">
-            <button className="bg-coffee-primary text-black px-8 py-3 text-sm font-bold uppercase tracking-widest hover:bg-white transition-colors">
+
+      {/* Categories Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        {categories.map((category) => (
+          <div key={category.id} className="mb-8">
+             {/* Category Title */}
+            <h3 className="text-2xl font-bold text-[#c49b63] mb-8 border-b border-gray-800 pb-2 inline-block">
+              {category.name}
+            </h3>
+
+            {/* Products List */}
+            <div className="space-y-6">
+              {category.products.map((product) => (
+                <div key={product.id} className="flex items-start gap-4 group">
+                    {/* Image Thumbnail */}
+                    <Link href={`/products/${product.id}`} className="shrink-0 w-16 h-16 relative rounded-full overflow-hidden border-2 border-[#c49b63]/20 group-hover:border-[#c49b63] transition-colors">
+                        {product.imageUrl ? (
+                             <Image 
+                                src={product.imageUrl} 
+                                alt={product.name} 
+                                fill 
+                                className="object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-gray-800" />
+                        )}
+                    </Link>
+
+                    {/* Content */}
+                    <div className="flex-1 border-b border-gray-800 border-dashed pb-4 group-last:border-0">
+                        <div className="flex justify-between items-baseline mb-1">
+                            <Link href={`/products/${product.id}`}>
+                                <h4 className="text-lg font-medium text-white group-hover:text-[#c49b63] transition-colors cursor-pointer uppercase">
+                                    {product.name}
+                                </h4>
+                            </Link>
+                            <span className="text-xl font-bold text-[#c49b63] ml-4">
+                                {formatCurrency(product.basePrice)}
+                            </span>
+                        </div>
+                        <p className="text-gray-400 text-sm line-clamp-2">
+                            {product.description}
+                        </p>
+                    </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      {/* View Full Menu Button */}
+      <div className="text-center mt-12">
+          <Link href="/menu">
+            <button className="px-8 py-3 bg-[#c49b63] text-white font-bold uppercase tracking-widest hover:bg-[#b08b55] transition-colors text-sm">
                 View Full Menu
             </button>
-        </div>
+          </Link>
       </div>
     </section>
   );

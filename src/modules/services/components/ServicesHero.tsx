@@ -15,16 +15,16 @@ const ServicesHero = () => {
 
       <div className="container mx-auto text-center flex flex-col items-center gap-4 mt-20">
         <h1 className="font-josefin text-4xl md:text-6xl text-white font-bold uppercase tracking-wider mb-4">
-          Services
+          Dịch vụ
         </h1>
         
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-white/80 font-poppins text-sm uppercase tracking-widest">
           <Link href="/" className="hover:text-[#c49b63] transition-colors">
-            Home
+            Trang chủ
           </Link>
           <span className="text-[#c49b63]">/</span>
-          <span className="text-white">Services</span>
+          <span className="text-white">Dịch vụ</span>
         </div>
       </div>
     </section>

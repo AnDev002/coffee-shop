@@ -1,16 +1,53 @@
 // src/auth.ts
 import NextAuth from "next-auth";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { db } from "@/lib/db";
 import { authConfig } from "@/auth.config";
+import Credentials from "next-auth/providers/credentials";
+import { LoginSchema } from "@/schemas";
+import bcrypt from "bcryptjs";
+// import { getUserById } from "@/data/user"; // Tạm thời comment để isolate lỗi
 
 export const {
-  handlers, 
+  handlers,
   auth,
   signIn,
   signOut,
 } = NextAuth({
-  adapter: PrismaAdapter(db),
-  session: { strategy: "jwt" },
-  ...authConfig,
+  ...authConfig, // Kế thừa logic session từ config đã sửa ở Bước 1
+  providers: [
+    Credentials({
+      async authorize(credentials) {
+        const validatedFields = LoginSchema.safeParse(credentials);
+
+        if (validatedFields.success) {
+          const { email, password } = validatedFields.data;
+          
+          const user = await db.user.findFirst({
+            where: { userName: email } 
+          });
+          
+          if (!user || !user.passwordHash) return null;
+          
+          const passwordsMatch = await bcrypt.compare(
+            password,
+            user.passwordHash
+          );
+
+          if (passwordsMatch) {
+            // Trả về object User đầy đủ
+            return {
+                id: user.id.toString(), 
+                name: user.fullName,
+                email: user.userName,
+                role: user.role, 
+            };
+          }
+        }
+        return null;
+      }
+    })
+  ],
+  // Ở đây không cần override callbacks nữa vì đã xử lý tốt trong auth.config.ts
+  // Nếu muốn fetch DB realtime, hãy đảm bảo code không crash. 
+  // Hiện tại hãy dùng cấu hình mặc định để đảm bảo đăng nhập được đã.
 });

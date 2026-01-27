@@ -6,20 +6,20 @@ const ServicesInfoSection = () => {
     {
       id: 1,
       icon: <ClipboardList strokeWidth={1} className="w-[60px] h-[60px] text-[#1d150b]" />,
-      title: "EASY TO ORDER",
-      description: "Even the all-powerful Pointing has no control about the blind texts it is an almost unorthographic."
+      title: "Dễ dàng đặt hàng",
+      description: "Quy trình đặt món được tối ưu hóa đơn giản, giúp bạn dễ dàng lựa chọn và thanh toán chỉ với vài thao tác trên mọi thiết bị."
     },
     {
       id: 2,
       icon: <Truck strokeWidth={1} className="w-[60px] h-[60px] text-[#1d150b]" />,
-      title: "FASTEST DELIVERY",
-      description: "Even the all-powerful Pointing has no control about the blind texts it is an almost unorthographic."
+      title: "Vận chuyển nhanh chóng",
+      description: "Đội ngũ giao hàng chuyên nghiệp cam kết mang đến những ly cà phê thơm ngon nhất trong thời gian ngắn nhất, bất kể thời tiết."
     },
     {
       id: 3,
       icon: <Coffee strokeWidth={1} className="w-[60px] h-[60px] text-[#1d150b]" />,
-      title: "QUALITY COFFEE",
-      description: "Even the all-powerful Pointing has no control about the blind texts it is an almost unorthographic."
+      title: "Cà phê chất lượng",
+      description: "Tuyển chọn từ những hạt cà phê thượng hạng nhất, được rang xay và pha chế tỉ mỉ để giữ trọn hương vị nguyên bản đậm đà."
     }
   ];
 

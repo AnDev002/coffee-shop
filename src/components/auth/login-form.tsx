@@ -1,71 +1,114 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { LoginSchema } from "@/schemas";
-import { login } from "@/actions/login"; // Import Server Action bước 1
+import { login } from "@/actions/login";
+import { useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 export const LoginForm = () => {
   const [error, setError] = useState<string | undefined>("");
-  const [isPending, startTransition] = useTransition();
-
+  const [loading, setLoading] = useState(false); // Dùng state thường thay vì useTransition để test
+  const searchParams = useSearchParams();
+  const { update } = useSession();
+  
+  const callbackUrl = searchParams.get("callbackUrl");
   const form = useForm<z.infer<typeof LoginSchema>>({
     resolver: zodResolver(LoginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+    defaultValues: { email: "", password: "" },
   });
 
-  const onSubmit = (values: z.infer<typeof LoginSchema>) => {
+  // Hàm xử lý chính
+  const handleLoginProcess = async (values: z.infer<typeof LoginSchema>) => {
+    // 1. Reset lỗi & Bật loading
     setError("");
-    
-    // Gọi Server Action trong transition để không chặn UI
-    startTransition(() => {
-      login(values).then((data) => {
-        // Nếu có lỗi thì hiển thị, nếu thành công thì middleware/action tự redirect
-        if (data?.error) {
-            setError(data.error);
-        }
-      });
-    });
+    setLoading(true);
+
+    try {
+      // 2. Gọi Server Action
+      const data = await login(values, callbackUrl);
+
+      // 3. Xử lý kết quả
+      if (data?.error) {
+        setError(data.error);
+        alert(`❌ Lỗi từ Server: ${data.error}`);
+      } 
+      
+      if (data?.success) {
+        // Thông báo thành công (Để bạn biết code đã chạy đến đây)
+        // alert("✅ Đăng nhập thành công! Nhấn OK để chuyển trang.");
+        
+        // 4. Update session
+        await update();
+        
+        // 5. Hard Reload (Chìa khóa để fix lỗi Header)
+        const destination = data.redirectTo || "/";
+        window.location.assign(destination);
+      }
+    } catch (err) {
+      alert("💥 Lỗi kết nối! Xem console trình duyệt để biết thêm.");
+      console.error(err);
+      setError("Lỗi hệ thống");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Hàm wrapper để chặn Enter reload trang
+  const onSubmit = (values: z.infer<typeof LoginSchema>) => {
+    handleLoginProcess(values);
   };
 
   return (
-    <div className="max-w-md mx-auto border p-5 rounded shadow">
-      <h2 className="text-2xl font-bold mb-4 text-center">Đăng nhập</h2>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div>
-          <label>Email</label>
-          <input
-            {...form.register("email")}
-            type="email"
-            disabled={isPending}
-            className="w-full border p-2 rounded"
-          />
-        </div>
-        <div>
-          <label>Mật khẩu</label>
-          <input
-            {...form.register("password")}
-            type="password"
-            disabled={isPending}
-            className="w-full border p-2 rounded"
-          />
-        </div>
-        
-        {error && <div className="bg-red-100 text-red-500 p-2 rounded">{error}</div>}
+    <div className="max-w-md mx-auto border p-5 rounded shadow bg-white">
+       {/* Dùng thẻ div thay vì form để chặn tuyệt đối hành vi reload mặc định 
+          khi nhấn Enter hoặc Button
+       */}
+       <div 
+         className="space-y-4"
+         onKeyDown={(e) => {
+           if (e.key === "Enter") {
+             e.preventDefault(); // Chặn reload
+             form.handleSubmit(onSubmit)(); // Submit thủ công
+           }
+         }}
+       >
+          <div className="space-y-2">
+            <input 
+              {...form.register("email")}
+              placeholder="Email" 
+              type="email"
+              disabled={loading}
+              className="w-full border p-2 rounded text-black"
+            />
+             {form.formState.errors.email && <p className="text-red-500 text-sm">{form.formState.errors.email.message}</p>}
+          </div>
 
-        <button 
-            type="submit" 
-            disabled={isPending}
-            className="w-full bg-black text-white p-2 rounded hover:bg-gray-800"
-        >
-          {isPending ? "Đang xử lý..." : "Đăng nhập"}
-        </button>
-      </form>
+          <div className="space-y-2">
+            <input 
+              {...form.register("password")}
+              placeholder="Mật khẩu" 
+              type="password"
+              disabled={loading}
+              className="w-full border p-2 rounded text-black"
+            />
+             {form.formState.errors.password && <p className="text-red-500 text-sm">{form.formState.errors.password.message}</p>}
+          </div>
+
+          {error && <div className="bg-red-100 text-red-500 p-2 rounded text-sm">{error}</div>}
+
+          <button 
+              type="button" // Quan trọng: type="button"
+              onClick={form.handleSubmit(onSubmit)}
+              disabled={loading}
+              className="w-full bg-black text-white p-2 rounded hover:bg-gray-800 disabled:opacity-50"
+          >
+            {loading ? "Đang xử lý..." : "Đăng nhập"}
+          </button>
+       </div>
     </div>
   );
 };

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { HeaderIcons as Icons } from './HeaderIcons';
 import { Ticket } from 'lucide-react';
 import ShootingStarIcon from '@/icons/shooting-star.svg';
+import { usePathname } from 'next/navigation';
 
 interface UserAccountDropdownProps {
   user: any;
@@ -13,6 +14,7 @@ interface UserAccountDropdownProps {
 }
 
 const UserAccountDropdown = ({ user, logout }: UserAccountDropdownProps) => {
+  const pathname = usePathname();
   return (
     <div className="group relative h-full flex items-center">
       {/* Trigger Button */}
@@ -25,11 +27,11 @@ const UserAccountDropdown = ({ user, logout }: UserAccountDropdownProps) => {
           )}
         </div>
         <div className="hidden xl:flex flex-col">
-          <span className="text-[11px] text-gray-500 leading-tight">
+          <span className="text-[11px] text-white leading-tight">
             {user ? 'Xin chào,' : 'Tài khoản'}
           </span>
           <div className="flex items-center gap-1">
-            <span className="text-[13px] font-bold text-gray-800 leading-tight max-w-[100px] truncate">
+            <span className="text-[13px] font-bold text-white leading-tight max-w-[100px] truncate">
                 {user ? (user.name || 'Member') : 'Đăng nhập / Đăng ký'}
             </span>
             {user && <Icons.ChevronDown className="w-3 h-3 text-gray-400" />}
@@ -51,26 +53,6 @@ const UserAccountDropdown = ({ user, logout }: UserAccountDropdownProps) => {
               <p className="text-xs text-gray-500 truncate">{user.email || 'Thành viên thân thiết'}</p>
             </div>
             
-            <Link href="/user/profile" className="px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700 hover:text-brand-orange transition-colors">
-              <Icons.User className="w-4 h-4" /> Hồ sơ cá nhân
-            </Link>
-            <Link href="/user/purchase" className="px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700 hover:text-brand-orange transition-colors">
-              <Icons.Order className="w-4 h-4" /> Trạng thái đơn hàng
-            </Link>
-
-            <Link href="/user/vouchers" className="px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700 hover:text-brand-orange transition-colors">
-              <Ticket className="w-4 h-4" /> Kho Voucher {/* Giả sử Icons có Ticket hoặc dùng fallback */}
-            </Link>
-            <Link href="/user/reward-points" className="px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700 hover:text-brand-orange transition-colors">
-              <ShootingStarIcon className="w-4 h-4" /> Điểm thưởng
-            </Link>
-            
-            {/* MỚI: Thêm Affiliate Option */}
-            <Link href="/affiliate/dashboard" className="px-4 py-2.5 hover:bg-gray-50 flex items-center gap-3 text-sm text-gray-700 hover:text-brand-orange transition-colors">
-              {/* Tạm thời dùng icon User hoặc Order nếu chưa có icon riêng */}
-              <Icons.User className="w-4 h-4" /> Cộng tác viên (Affiliate)
-            </Link>
-
             <div className="h-px bg-gray-100 my-2 mx-4"></div>
             <button onClick={logout} className="w-full text-left px-4 py-2.5 hover:bg-red-50 flex items-center gap-3 text-sm text-gray-700 hover:text-red-600 transition-colors">
               <Icons.LogOut className="w-4 h-4" /> Đăng xuất

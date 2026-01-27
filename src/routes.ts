@@ -3,6 +3,13 @@
  */
 export const publicRoutes = [
   "/",
+  "/menu",      // Thêm
+  "/products",  // Thêm prefix cho product detail
+  "/about",     // Thêm
+  "/contact",   // Thêm
+  "/services",  // Thêm (nếu có)
+  "/payment",
+  "/unauthorized",
 ];
 
 /**
@@ -13,6 +20,9 @@ export const authRoutes = [
   "/register",
 ];
 
+export const adminRoutesPrefix = "/admin";
+
+export const staffRoutesPrefix = "/staff";
 /**
  * Prefix cho API authentication
  */
@@ -21,4 +31,6 @@ export const apiAuthPrefix = "/api/auth";
 /**
  * Trang mặc định sau khi login thành công
  */
-export const DEFAULT_LOGIN_REDIRECT = "/dashboard";
+export const DEFAULT_LOGIN_REDIRECT = "/menu";
+export const DEFAULT_ADMIN_REDIRECT = "/admin/dashboard";
+export const DEFAULT_STAFF_REDIRECT = "/staff/orders";

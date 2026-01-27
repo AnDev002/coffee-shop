@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   
   // eslint: { ignoreDuringBuilds: true }, // Bạn có thể thêm dòng này nếu bị lỗi ESLint chặn deploy
   images: {
+    dangerouslyAllowSVG: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -16,6 +17,10 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'i.pravatar.cc',
+      },
+      {
+        protocol: "https",
+        hostname: "placehold.co",
       },
     ],
   },

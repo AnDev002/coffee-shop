@@ -4,26 +4,26 @@ import { ClipboardList, Truck, Award } from 'lucide-react';
 const FEATURES = [
     { 
         icon: ClipboardList, 
-        title: "Easy to Order", 
-        desc: "Even the all-powerful Pointing has no control about the blind texts." 
+        title: "Dễ dàng đặt hàng", 
+        desc: "Quy trình đặt món được tối ưu hóa đơn giản, giúp bạn dễ dàng lựa chọn và thanh toán chỉ với vài thao tác trên mọi thiết bị." 
     },
     { 
         icon: Truck, 
-        title: "Fastest Delivery", 
-        desc: "Even the all-powerful Pointing has no control about the blind texts." 
+        title: "Vận chuyển nhanh chóng", 
+        desc: "Đội ngũ giao hàng chuyên nghiệp cam kết mang đến những ly cà phê thơm ngon nhất trong thời gian ngắn nhất, bất kể thời tiết." 
     },
     { 
         icon: Award, 
-        title: "Quality Coffee", 
-        desc: "Even the all-powerful Pointing has no control about the blind texts." 
+        title: "Cà phê chất lượng", 
+        desc: "Tuyển chọn từ những hạt cà phê thượng hạng nhất, được rang xay và pha chế tỉ mỉ để giữ trọn hương vị nguyên bản đậm đà." 
     },
 ];
 
 const STATS = [
-    { number: "100", label: "Coffee Branches" },
-    { number: "85", label: "Number of Awards" },
-    { number: "10,567", label: "Happy Customers" },
-    { number: "900", label: "Staff" },
+    { number: "100", label: "Chi nhánh" },
+    { number: "85", label: "Giải thưởng" },
+    { number: "10,567", label: "Khách hàng hài lòng" },
+    { number: "900", label: "Nhân viên" },
 ];
 
 export const FeaturesSection = () => {

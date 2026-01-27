@@ -10,14 +10,14 @@ export const ContactFormSection = () => {
       {/* Left Column: Contact Information */}
       <div className="flex-1 space-y-12">
         <div className="space-y-2">
-          <h2 className="font-sans text-3xl text-white font-normal mb-8">Contact Information</h2>
+          <h2 className="font-sans text-3xl text-white font-normal mb-8">Thông tin liên hệ</h2>
           
           {/* Address */}
           <div className="flex gap-4 items-start">
              <div className="text-white mt-1"><MapPin size={20} /></div>
              <p className="font-sans text-[15px] font-light text-gray-400 leading-7">
-               <span className="text-white font-normal mr-2">Address:</span>
-               198 West 21th Street, Suite 721 New York NY 10016
+               <span className="text-white font-normal mr-2">Địa chỉ:</span>
+               198 Phố ABC, Quận XYZ, Thành phố Hà Nội, Việt Nam
              </p>
           </div>
 
@@ -25,8 +25,8 @@ export const ContactFormSection = () => {
           <div className="flex gap-4 items-center">
              <div className="text-white"><Phone size={20} /></div>
              <p className="font-sans text-[15px] font-light text-white leading-7">
-               <span className="text-white font-normal mr-2">Phone:</span>
-               <a href="tel:+911235235598" className="text-[#C49B63] hover:text-[#d4a86e]">+91 1235 2355 98</a>
+               <span className="text-white font-normal mr-2">Số điện thoại:</span>
+               <a href="tel:+911235235598" className="text-[#C49B63] hover:text-[#d4a86e]">(+84) 91.222.2222</a>
              </p>
           </div>
 
@@ -35,7 +35,7 @@ export const ContactFormSection = () => {
              <div className="text-white"><Mail size={20} /></div>
              <p className="font-sans text-[15px] font-light text-white leading-7">
                <span className="text-white font-normal mr-2">Email:</span>
-               <a href="mailto:info@yoursite.com" className="text-[#C49B63] hover:text-[#d4a86e]">info@yoursite.com</a>
+               <a href="mailto:info@yoursite.com" className="text-[#C49B63] hover:text-[#d4a86e]">huy1232123@gmail.com</a>
              </p>
           </div>
 
@@ -44,7 +44,7 @@ export const ContactFormSection = () => {
              <div className="text-white"><Globe size={20} /></div>
              <p className="font-sans text-[15px] font-light text-white leading-7">
                <span className="text-white font-normal mr-2">Website:</span>
-               <a href="https://yoursite.com" className="text-[#C49B63] hover:text-[#d4a86e]">yoursite.com</a>
+               <a href="https://yoursite.com" className="text-[#C49B63] hover:text-[#d4a86e]">h-coffee.com.vn</a>
              </p>
           </div>
         </div>
@@ -83,7 +83,7 @@ export const ContactFormSection = () => {
                variant="primary" 
                className="!bg-[#C49B63] hover:!bg-[#b38b55] !text-black !rounded-none !px-12 !py-4 !font-normal !text-[15px] !tracking-wider uppercase"
             >
-              Send Message
+              Gửi tin nhắn
             </Button>
           </div>
         </form>

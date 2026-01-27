@@ -40,14 +40,6 @@ const ADMIN_MENU: MenuItem[] = [
       { id: 'all_users', label: 'Danh sách người dùng', path: '/admin/users' },
     ]
   },
-  {
-    id: 'system',
-    label: 'Cài đặt hệ thống',
-    icon: <FiSettings size={20} />,
-    children: [
-      { id: 'banners', label: 'Banner & Quảng cáo', path: '/admin/settings/banners' },
-    ]
-  },
 ];
 
 const SidebarItem = ({ item, level = 0, isOpen, toggleOpen }: { 

@@ -27,7 +27,7 @@ export function proxy(req: NextRequest) {
 
   // 3. Logic cho User thường (www.lovegifts.vn)
   // Bảo vệ các route cần login như /cart, /profile
-  const protectedPaths = ['/cart', '/profile', '/checkout'];
+  const protectedPaths = ['/profile'];
   if (protectedPaths.some(path => pathname.startsWith(path))) {
     if (!token) {
       const loginUrl = new URL('/login', req.url);

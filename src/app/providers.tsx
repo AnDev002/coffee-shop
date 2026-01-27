@@ -1,13 +1,12 @@
+// src/app/providers.tsx
 "use client";
 
-import { ThemeProvider } from "next-themes";
-import AuthProvider from "@/components/auth/AuthProvider";
+import { SessionProvider } from "next-auth/react";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-        {/* Các provider khác */}
-        {children}
-    </AuthProvider>
+    <SessionProvider>
+      {children}
+    </SessionProvider>
   );
 }

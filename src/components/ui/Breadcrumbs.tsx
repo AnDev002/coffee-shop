@@ -1,12 +1,10 @@
 // src/components/ui/Breadcrumbs.tsx
 import React from "react";
 import Link from "next/link";
-// Thay vì import từ @/icons có thể gây lỗi, hãy dùng SVG trực tiếp
-// import ArrowRightIcon from "@/icons/arrow-right.svg"; 
 
-interface BreadcrumbItem {
+export interface BreadcrumbItem {
   name: string;
-  href: string;
+  href?: string; // Cho phép href không bắt buộc (ví dụ: trang hiện tại)
 }
 
 interface BreadcrumbsProps {
@@ -19,21 +17,25 @@ const Breadcrumbs: React.FC<BreadcrumbsProps> = ({ items }) => {
       <ol className="flex items-center gap-2">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;
+          
           return (
-            <li key={item.name} className="flex items-center gap-2">
-              <Link
-                href={item.href}
-                className={`font-sans text-base ${
-                  isLast
-                    ? "text-black font-medium pointer-events-none" // Disable link cho item cuối
-                    : "text-gray-600 hover:text-brand-orange transition-colors"
-                }`}
-                aria-current={isLast ? "page" : undefined}
-              >
-                {item.name}
-              </Link>
+            <li key={index} className="flex items-center gap-2">
+              {isLast || !item.href ? (
+                // Nếu là trang cuối hoặc không có link -> Render Text thường
+                <span className="font-sans text-base text-black font-medium" aria-current="page">
+                  {item.name}
+                </span>
+              ) : (
+                // Nếu có link -> Render Link
+                <Link
+                  href={item.href}
+                  className="font-sans text-base text-gray-600 hover:text-brand-orange transition-colors"
+                >
+                  {item.name}
+                </Link>
+              )}
+
               {!isLast && (
-                // SVG Chevron Right đơn giản
                 <svg 
                   width="16" 
                   height="16" 

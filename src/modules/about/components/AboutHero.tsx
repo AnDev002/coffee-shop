@@ -16,7 +16,7 @@ const AboutHero = () => {
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center gap-4 animate-fade-in-up">
         <h1 className="text-white font-josefin font-bold text-[40px] md:text-[50px] uppercase tracking-wider">
-          About Us
+          Về chúng tôi
         </h1>
         
         {/* Breadcrumbs */}
@@ -25,11 +25,11 @@ const AboutHero = () => {
             href="/" 
             className="text-white/70 hover:text-[#c49b63] uppercase font-poppins transition-colors"
           >
-            Home
+            Trang chủ
           </Link>
           <ChevronRight className="w-4 h-4 text-white/50" />
           <span className="text-white uppercase font-poppins tracking-widest">
-            About
+            Về chúng tôi
           </span>
         </div>
       </div>
