@@ -20,5 +20,6 @@ export interface ProductDetail {
   basePrice: number; // Giá gốc
   imageUrl: string;
   categoryId: number;
+  isAvailable: boolean;
   optionGroups: OptionGroup[]; // Danh sách nhóm option (Size, Topping...)
 }

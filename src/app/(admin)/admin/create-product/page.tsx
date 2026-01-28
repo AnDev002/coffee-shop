@@ -1,38 +1,52 @@
 // src/app/(admin)/admin/products/create/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   FiArrowLeft, FiSave, FiPlus, FiTrash2, FiImage, 
   FiCheckCircle, FiCircle, FiCheckSquare 
 } from 'react-icons/fi';
 import Link from 'next/link';
+// Import Server Actions
+import { createProduct } from '@/actions/product';
+import { getCategoriesForFilter } from '@/actions/product';
 
 // --- Types definition ---
 interface OptionItem {
   id: string;
   name: string;
-  price: number; // Giá thêm (VD: trân châu +5k)
+  price: number; 
 }
 
 interface OptionGroup {
   id: string;
-  title: string; // VD: Mức đường, Topping
-  isRequired: boolean; // Bắt buộc chọn hay không
-  type: 'single' | 'multiple'; // Chọn 1 hay nhiều
+  title: string; 
+  isRequired: boolean; 
+  type: 'single' | 'multiple'; 
   items: OptionItem[];
+}
+
+interface Category {
+  id: number;
+  name: string;
 }
 
 export default function CreateProductPage() {
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // --- State quản lý Form ---
   const [productName, setProductName] = useState('');
   const [price, setPrice] = useState<number>(0);
-  const [category, setCategory] = useState('coffee');
-  const [description, setDescription] = useState('');
   
+  // Thay đổi: Category lưu ID thay vì string hardcode
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryId, setCategoryId] = useState<number | null>(null);
+  
+  const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState(''); // State tạm cho URL ảnh
+
   // State quản lý danh sách Option
   const [optionGroups, setOptionGroups] = useState<OptionGroup[]>([
     {
@@ -49,9 +63,24 @@ export default function CreateProductPage() {
     }
   ]);
 
+  // --- Fetch Categories on Mount ---
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await getCategoriesForFilter();
+        setCategories(data);
+        if (data.length > 0) {
+            setCategoryId(data[0].id); // Default select first category
+        }
+      } catch (error) {
+        console.error("Failed to load categories", error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   // --- Handlers ---
   
-  // 1. Thêm nhóm tùy chọn mới (VD: Thêm nhóm "Topping")
   const addOptionGroup = () => {
     const newGroup: OptionGroup = {
       id: `group-${Date.now()}`,
@@ -63,19 +92,16 @@ export default function CreateProductPage() {
     setOptionGroups([...optionGroups, newGroup]);
   };
 
-  // 2. Xóa nhóm tùy chọn
   const removeOptionGroup = (groupId: string) => {
     setOptionGroups(optionGroups.filter(g => g.id !== groupId));
   };
 
-  // 3. Cập nhật thông tin nhóm (Tiêu đề, loại chọn)
   const updateOptionGroup = (groupId: string, field: keyof OptionGroup, value: any) => {
     setOptionGroups(optionGroups.map(g => 
       g.id === groupId ? { ...g, [field]: value } : g
     ));
   };
 
-  // 4. Thêm lựa chọn con (VD: Thêm "Trân châu trắng" vào nhóm "Topping")
   const addOptionItem = (groupId: string) => {
     setOptionGroups(optionGroups.map(g => {
       if (g.id === groupId) {
@@ -88,7 +114,6 @@ export default function CreateProductPage() {
     }));
   };
 
-  // 5. Cập nhật lựa chọn con
   const updateOptionItem = (groupId: string, itemId: string, field: keyof OptionItem, value: any) => {
     setOptionGroups(optionGroups.map(g => {
       if (g.id === groupId) {
@@ -101,7 +126,6 @@ export default function CreateProductPage() {
     }));
   };
 
-  // 6. Xóa lựa chọn con
   const removeOptionItem = (groupId: string, itemId: string) => {
     setOptionGroups(optionGroups.map(g => {
       if (g.id === groupId) {
@@ -109,6 +133,49 @@ export default function CreateProductPage() {
       }
       return g;
     }));
+  };
+
+  // --- MAIN: Handle Save Product ---
+  const handleSave = async () => {
+    if (!productName || !price || !categoryId) {
+        alert("Vui lòng điền tên món, giá và chọn danh mục!");
+        return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+        const payload = {
+            name: productName,
+            basePrice: price,
+            categoryId: categoryId,
+            description: description,
+            imageUrl: imageUrl, // Hiện tại đang để trống hoặc input text, cần bổ sung logic upload
+            optionGroups: optionGroups.map(g => ({
+                title: g.title,
+                isRequired: g.isRequired,
+                type: g.type,
+                items: g.items.map(i => ({
+                    name: i.name,
+                    price: i.price
+                }))
+            }))
+        };
+
+        const result = await createProduct(payload);
+
+        if (result.success) {
+            alert("Tạo sản phẩm thành công!");
+            router.push('/admin/products');
+        } else {
+            alert("Lỗi khi tạo sản phẩm: " + result.error);
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Đã có lỗi xảy ra");
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   return (
@@ -128,9 +195,13 @@ export default function CreateProductPage() {
             <Link href="/admin/products" className="px-5 py-2.5 rounded-xl border border-gray-300 text-gray-600 font-medium hover:bg-gray-50 transition-colors">
                 Hủy bỏ
             </Link>
-            <button className="flex items-center gap-2 px-5 py-2.5 bg-[#c49b63] hover:bg-[#b08b55] text-white rounded-xl shadow-lg shadow-[#c49b63]/30 font-medium transition-all">
+            <button 
+                onClick={handleSave}
+                disabled={isSubmitting}
+                className={`flex items-center gap-2 px-5 py-2.5 bg-[#c49b63] hover:bg-[#b08b55] text-white rounded-xl shadow-lg shadow-[#c49b63]/30 font-medium transition-all ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
                 <FiSave size={20} />
-                <span>Lưu sản phẩm</span>
+                <span>{isSubmitting ? 'Đang lưu...' : 'Lưu sản phẩm'}</span>
             </button>
         </div>
       </div>
@@ -144,7 +215,7 @@ export default function CreateProductPage() {
                 <h3 className="text-lg font-bold text-[#1d150b] mb-4">Thông tin cơ bản</h3>
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Tên món</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Tên món <span className='text-red-500'>*</span></label>
                         <input 
                             type="text" 
                             placeholder="VD: Cà phê sữa đá" 
@@ -155,7 +226,7 @@ export default function CreateProductPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Giá bán (VNĐ)</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Giá bán (VNĐ) <span className='text-red-500'>*</span></label>
                             <input 
                                 type="number" 
                                 placeholder="0" 
@@ -165,16 +236,16 @@ export default function CreateProductPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Danh mục</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Danh mục <span className='text-red-500'>*</span></label>
                             <select 
                                 className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#c49b63]/50 focus:border-[#c49b63] transition-all"
-                                value={category}
-                                onChange={(e) => setCategory(e.target.value)}
+                                value={categoryId || ''}
+                                onChange={(e) => setCategoryId(Number(e.target.value))}
                             >
-                                <option value="coffee">Cà phê</option>
-                                <option value="tea">Trà trái cây</option>
-                                <option value="cake">Bánh ngọt</option>
-                                <option value="food">Đồ ăn vặt</option>
+                                {categories.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                ))}
+                                {categories.length === 0 && <option value="">Đang tải danh mục...</option>}
                             </select>
                         </div>
                     </div>
@@ -191,7 +262,7 @@ export default function CreateProductPage() {
                 </div>
             </div>
 
-            {/* 2. Cấu hình Option (Phần quan trọng) */}
+            {/* 2. Cấu hình Option */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="text-lg font-bold text-[#1d150b]">Tùy chọn & Topping</h3>
@@ -243,6 +314,16 @@ export default function CreateProductPage() {
                                                 {group.type === 'multiple' && <FiCheckSquare className="text-white text-[10px]" />}
                                             </span>
                                             <span className={group.type === 'multiple' ? 'text-[#c49b63] font-medium' : 'text-gray-500'}>Chọn nhiều (Checkbox)</span>
+                                        </label>
+
+                                        <label className="flex items-center gap-2 cursor-pointer ml-4">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={group.isRequired}
+                                                onChange={(e) => updateOptionGroup(group.id, 'isRequired', e.target.checked)}
+                                                className="rounded text-[#c49b63] focus:ring-[#c49b63]"
+                                            />
+                                            <span className="text-gray-600">Bắt buộc chọn</span>
                                         </label>
                                     </div>
                                 </div>
@@ -311,12 +392,31 @@ export default function CreateProductPage() {
             {/* Ảnh sản phẩm */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <h3 className="text-lg font-bold text-[#1d150b] mb-4">Hình ảnh</h3>
-                <div className="aspect-square w-full rounded-xl border-2 border-dashed border-gray-300 hover:border-[#c49b63] hover:bg-[#c49b63]/5 transition-all cursor-pointer flex flex-col items-center justify-center text-gray-400 gap-2 group">
-                    <div className="w-12 h-12 rounded-full bg-gray-100 group-hover:bg-white flex items-center justify-center text-gray-400 group-hover:text-[#c49b63] transition-colors">
-                        <FiImage size={24} />
-                    </div>
-                    <span className="text-sm font-medium group-hover:text-[#c49b63]">Tải ảnh lên</span>
-                    <span className="text-xs text-gray-400">PNG, JPG tối đa 5MB</span>
+                
+                {/* Tạm thời dùng Input Text cho URL ảnh vì chưa có logic upload file */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">URL Ảnh</label>
+                    <input 
+                         type="text" 
+                         placeholder="https://..."
+                         className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:border-[#c49b63] focus:outline-none"
+                         value={imageUrl}
+                         onChange={(e) => setImageUrl(e.target.value)}
+                    />
+                </div>
+
+                <div className="aspect-square w-full rounded-xl border-2 border-dashed border-gray-300 hover:border-[#c49b63] hover:bg-[#c49b63]/5 transition-all cursor-pointer flex flex-col items-center justify-center text-gray-400 gap-2 group relative overflow-hidden">
+                    {imageUrl ? (
+                        <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.src = 'https://placehold.co/400?text=No+Image')} />
+                    ) : (
+                        <>
+                            <div className="w-12 h-12 rounded-full bg-gray-100 group-hover:bg-white flex items-center justify-center text-gray-400 group-hover:text-[#c49b63] transition-colors">
+                                <FiImage size={24} />
+                            </div>
+                            <span className="text-sm font-medium group-hover:text-[#c49b63]">Tải ảnh lên</span>
+                            <span className="text-xs text-gray-400">Hiện tại vui lòng nhập URL</span>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -332,12 +432,6 @@ export default function CreateProductPage() {
                             <span className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-300 peer-checked:translate-x-5"></span>
                         </div>
                     </label>
-                    <div className="pt-3 border-t border-gray-100">
-                        <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                            <input type="checkbox" className="rounded text-[#c49b63] focus:ring-[#c49b63]" />
-                            <span>Sản phẩm nổi bật (Best Seller)</span>
-                        </label>
-                    </div>
                 </div>
             </div>
         </div>

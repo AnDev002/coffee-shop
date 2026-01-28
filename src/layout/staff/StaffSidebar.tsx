@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   FiHome, FiCoffee, FiLogOut, FiShield, FiClipboard
 } from 'react-icons/fi';
 import classNames from 'classnames';
+import { logout } from '@/actions/logout';
 
 interface MenuItem {
   id: string;
@@ -48,9 +49,17 @@ const SidebarItem = ({ item }: { item: MenuItem }) => {
 };
 
 const StaffSidebar = () => {
+  const [isPending, startTransition] = useTransition();
+
+  const handleLogout = () => {
+    startTransition(async () => {
+        await logout();
+    });
+  };
+
   return (
     <aside className="fixed top-0 left-0 w-[260px] h-screen bg-white border-r border-gray-100 shadow-xl shadow-gray-200/50 z-50 flex flex-col font-sans">
-      {/* Header Logo - Giữ nguyên style Admin để đồng bộ thương hiệu */}
+      {/* Header Logo */}
       <div className="h-[80px] flex items-center px-6 border-b border-gray-100 gap-3">
         <div className="w-10 h-10 bg-[#1d150b] rounded-xl flex items-center justify-center text-[#c49b63] shadow-lg shadow-[#1d150b]/20">
           <FiShield size={20}/>
@@ -68,8 +77,13 @@ const StaffSidebar = () => {
       </div>
       
       <div className="p-4 border-t border-gray-100 bg-gray-50/30">
-        <button className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">
-            <FiLogOut size={18} /> <span>Đăng xuất</span>
+        <button 
+            onClick={handleLogout}
+            disabled={isPending}
+            className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors disabled:opacity-50"
+        >
+            <FiLogOut size={18} /> 
+            <span>{isPending ? 'Đang đăng xuất...' : 'Đăng xuất'}</span>
         </button>
       </div>
     </aside>

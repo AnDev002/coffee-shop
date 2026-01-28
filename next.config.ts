@@ -22,6 +22,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "placehold.co",
       },
+      {
+        protocol: 'https',
+        hostname: '**', // Cho phép tất cả các domain HTTPS
+      },
+      {
+        protocol: 'http',
+        hostname: '**', // Cho phép tất cả các domain HTTP (nếu cần)
+      },
     ],
   },
   

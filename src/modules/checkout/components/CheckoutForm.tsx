@@ -3,9 +3,8 @@
 
 import { useCheckoutStore } from '@/store/useCheckoutStore';
 import { InputGroup } from '@/components/ui/InputGroup';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
-// Interfaces cho API Địa chính
 interface LocationItem {
   id: string;
   name: string;
@@ -16,7 +15,8 @@ export const CheckoutForm = () => {
   const { 
     buyerInfo, setBuyerInfo,
     receiverInfo, setReceiverInfo,
-    deliveryMethod, setDeliveryMethod 
+    deliveryMethod, setDeliveryMethod,
+    note, setNote
   } = useCheckoutStore();
 
   const [isGift, setIsGift] = useState(false);
@@ -26,20 +26,19 @@ export const CheckoutForm = () => {
   const [districts, setDistricts] = useState<LocationItem[]>([]);
   const [wards, setWards] = useState<LocationItem[]>([]);
 
+  // Init state từ store (nếu có) để tránh mất địa chỉ khi re-render
   const [selectedProvince, setSelectedProvince] = useState<string>("");
   const [selectedDistrict, setSelectedDistrict] = useState<string>("");
   const [selectedWard, setSelectedWard] = useState<string>("");
-  const [specificAddress, setSpecificAddress] = useState<string>(""); // Số nhà, tên đường
+  const [specificAddress, setSpecificAddress] = useState<string>("");
 
-  // 1. Fetch Tỉnh/Thành phố khi load trang
+  // 1. Fetch Tỉnh/Thành phố
   useEffect(() => {
     const fetchProvinces = async () => {
       try {
         const response = await fetch('https://esgoo.net/api-tinhthanh/1/0.htm');
         const data = await response.json();
-        if (data.error === 0) {
-          setProvinces(data.data);
-        }
+        if (data.error === 0) setProvinces(data.data);
       } catch (error) {
         console.error("Lỗi fetch tỉnh thành:", error);
       }
@@ -47,22 +46,17 @@ export const CheckoutForm = () => {
     fetchProvinces();
   }, []);
 
-  // 2. Fetch Quận/Huyện khi chọn Tỉnh
+  // 2. Fetch Quận/Huyện
   useEffect(() => {
     if (!selectedProvince) {
       setDistricts([]);
-      setWards([]);
       return;
     }
     const fetchDistricts = async () => {
       try {
         const response = await fetch(`https://esgoo.net/api-tinhthanh/2/${selectedProvince}.htm`);
         const data = await response.json();
-        if (data.error === 0) {
-          setDistricts(data.data);
-          setSelectedDistrict(""); // Reset huyện
-          setSelectedWard("");     // Reset xã
-        }
+        if (data.error === 0) setDistricts(data.data);
       } catch (error) {
         console.error("Lỗi fetch quận huyện:", error);
       }
@@ -70,7 +64,7 @@ export const CheckoutForm = () => {
     fetchDistricts();
   }, [selectedProvince]);
 
-  // 3. Fetch Phường/Xã khi chọn Quận
+  // 3. Fetch Phường/Xã
   useEffect(() => {
     if (!selectedDistrict) {
       setWards([]);
@@ -80,10 +74,7 @@ export const CheckoutForm = () => {
       try {
         const response = await fetch(`https://esgoo.net/api-tinhthanh/3/${selectedDistrict}.htm`);
         const data = await response.json();
-        if (data.error === 0) {
-          setWards(data.data);
-          setSelectedWard(""); // Reset xã
-        }
+        if (data.error === 0) setWards(data.data);
       } catch (error) {
         console.error("Lỗi fetch phường xã:", error);
       }
@@ -91,46 +82,52 @@ export const CheckoutForm = () => {
     fetchWards();
   }, [selectedDistrict]);
 
-  // 4. Cập nhật Full Address vào Store mỗi khi các trường thay đổi
-  useEffect(() => {
-    if (deliveryMethod === 'delivery') {
-      const provinceName = provinces.find(p => p.id === selectedProvince)?.name || "";
-      const districtName = districts.find(d => d.id === selectedDistrict)?.name || "";
-      const wardName = wards.find(w => w.id === selectedWard)?.name || "";
+  // 4. FIX: Cập nhật Full Address
+  // Chỉ tính toán khi có đủ dữ liệu, tránh return chuỗi rỗng làm mất địa chỉ cũ
+  const fullAddressString = useMemo(() => {
+     if (deliveryMethod !== 'delivery') return "Nhận tại quán";
+
+     const provinceName = provinces.find(p => p.id === selectedProvince)?.name || "";
+     const districtName = districts.find(d => d.id === selectedDistrict)?.name || "";
+     const wardName = wards.find(w => w.id === selectedWard)?.name || "";
       
-      // Format: Số 10, Đường ABC, Phường X, Quận Y, Thành phố Z
-      const fullParts = [specificAddress, wardName, districtName, provinceName].filter(Boolean);
-      const fullAddress = fullParts.join(", ");
+     // Chỉ update khi ít nhất có Tỉnh hoặc Huyện được chọn
+     if (!provinceName && !specificAddress) return null; 
 
-      // Chỉ update nếu địa chỉ thực sự thay đổi để tránh loop
-      if (fullAddress !== receiverInfo.address) {
-        setReceiverInfo({
-          ...receiverInfo,
-          address: fullAddress
-        });
-      }
+     const fullParts = [specificAddress, wardName, districtName, provinceName].filter(Boolean);
+     return fullParts.length > 0 ? fullParts.join(", ") : "";
+  }, [specificAddress, selectedProvince, selectedDistrict, selectedWard, provinces, districts, wards, deliveryMethod]);
+
+  // Effect update Store Address
+  useEffect(() => {
+    // Chỉ update khi giá trị HỢP LỆ (khác null/rỗng) và KHÁC giá trị hiện tại
+    if (fullAddressString && fullAddressString !== receiverInfo.address) {
+       // Sử dụng callback prev để tránh Stale Closure (Lỗi ghi đè dữ liệu cũ)
+       setReceiverInfo({
+           ...useCheckoutStore.getState().receiverInfo, // Lấy state mới nhất trực tiếp
+           address: fullAddressString
+       });
     }
-  }, [specificAddress, selectedProvince, selectedDistrict, selectedWard, deliveryMethod]); // Xóa receiverInfo khỏi dep
+  }, [fullAddressString]); 
 
-  // Đồng bộ thông tin: Nếu không phải quà tặng, Receiver = Buyer
+  // 5. FIX: Đồng bộ thông tin Buyer -> Receiver
   useEffect(() => {
     if (!isGift) {
+      // Dùng functional update để đảm bảo không ghi đè address bằng address cũ
       setReceiverInfo({
-        ...receiverInfo,
-        name: buyerInfo.name,
-        phone: buyerInfo.phone,
-        // Giữ nguyên address hiện tại do logic trên quản lý
+          ...useCheckoutStore.getState().receiverInfo, // Luôn merge với state mới nhất
+          name: buyerInfo.name,
+          phone: buyerInfo.phone,
       });
     }
-  }, [buyerInfo, isGift]); // Bỏ deliveryMethod để tránh conflict
+  }, [buyerInfo.name, buyerInfo.phone, isGift]);
 
   const handleBuyerChange = (field: string, value: string) => 
     setBuyerInfo({ ...buyerInfo, [field]: value });
 
   const handleReceiverChange = (field: string, value: string) => 
-    setReceiverInfo({ ...receiverInfo, [field]: value });
+    setReceiverInfo({ ...useCheckoutStore.getState().receiverInfo, [field]: value });
 
-  // CSS class chung cho thẻ Select để giống InputGroup
   const selectClassName = "w-full p-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-brand-orange focus:ring-1 focus:ring-brand-orange transition-all appearance-none text-sm text-gray-700";
 
   return (
@@ -177,7 +174,11 @@ export const CheckoutForm = () => {
             Giao tận nơi
           </button>
           <button
-            onClick={() => setDeliveryMethod('pickup')}
+            onClick={() => {
+                setDeliveryMethod('pickup'); 
+                // Khi chọn pickup, set cứng địa chỉ là Nhận tại quán
+                setReceiverInfo({...useCheckoutStore.getState().receiverInfo, address: "Nhận tại quán"});
+            }}
             className={`px-4 py-2 text-sm font-semibold rounded-md transition-all ${
               deliveryMethod === 'pickup' 
                 ? 'bg-white text-brand-orange shadow-sm' 
@@ -191,49 +192,19 @@ export const CheckoutForm = () => {
         {/* Nội dung thay đổi theo Tab */}
         {deliveryMethod === 'delivery' ? (
           <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
-             {/* Checkbox Gửi tặng */}
-             <div className="flex items-center gap-3 bg-pink-50/50 p-3 rounded-lg border border-pink-100 w-fit">
-                <input 
-                  type="checkbox" 
-                  id="gift-check"
-                  className="accent-pink-500 w-4 h-4 cursor-pointer"
-                  checked={isGift}
-                  onChange={(e) => setIsGift(e.target.checked)}
-                />
-                <label htmlFor="gift-check" className="cursor-pointer text-sm font-medium text-gray-700">
-                  Gửi tặng người thân/bạn bè?
-                </label>
-            </div>
-
-            {/* Form Người nhận (chỉ hiện khi Gift = true) */}
-            {isGift && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                <InputGroup 
-                  label="Tên người nhận" 
-                  placeholder="Họ tên người nhận"
-                  value={receiverInfo.name}
-                  onChange={(e: any) => handleReceiverChange('name', e.target.value)}
-                />
-                <InputGroup 
-                  label="SĐT người nhận" 
-                  placeholder="SĐT người nhận"
-                  value={receiverInfo.phone}
-                  onChange={(e: any) => handleReceiverChange('phone', e.target.value)}
-                />
-              </div>
-            )}
-
             {/* --- KHỐI ĐỊA CHỈ FETCH API --- */}
             <div className="space-y-4">
               <label className="block text-sm font-semibold text-gray-700">Địa chỉ giao hàng</label>
               
-              {/* Grid 3 cột cho Tỉnh - Huyện - Xã */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {/* Tỉnh/Thành */}
                 <div className="relative">
                   <select 
                     value={selectedProvince}
-                    onChange={(e) => setSelectedProvince(e.target.value)}
+                    onChange={(e) => {
+                        setSelectedProvince(e.target.value);
+                        setSelectedDistrict(""); // Reset khi đổi tỉnh
+                        setSelectedWard("");
+                    }}
                     className={selectClassName}
                   >
                     <option value="">Chọn Tỉnh/Thành</option>
@@ -241,16 +212,15 @@ export const CheckoutForm = () => {
                       <option key={prov.id} value={prov.id}>{prov.name}</option>
                     ))}
                   </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                     <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor"><path d="M1 1L5 5L9 1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </div>
                 </div>
 
-                {/* Quận/Huyện */}
                 <div className="relative">
                   <select 
                     value={selectedDistrict}
-                    onChange={(e) => setSelectedDistrict(e.target.value)}
+                    onChange={(e) => {
+                        setSelectedDistrict(e.target.value);
+                        setSelectedWard(""); // Reset khi đổi huyện
+                    }}
                     className={selectClassName}
                     disabled={!selectedProvince}
                   >
@@ -259,12 +229,8 @@ export const CheckoutForm = () => {
                       <option key={dist.id} value={dist.id}>{dist.name}</option>
                     ))}
                   </select>
-                   <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                     <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor"><path d="M1 1L5 5L9 1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </div>
                 </div>
 
-                {/* Phường/Xã */}
                 <div className="relative">
                    <select 
                     value={selectedWard}
@@ -277,28 +243,22 @@ export const CheckoutForm = () => {
                       <option key={ward.id} value={ward.id}>{ward.name}</option>
                     ))}
                   </select>
-                   <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                     <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor"><path d="M1 1L5 5L9 1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </div>
                 </div>
               </div>
 
-              {/* Input địa chỉ chi tiết */}
               <InputGroup 
-                label="" // Để trống label vì đã có header group ở trên
+                label="" 
                 placeholder="Số nhà, tên đường, tòa nhà..."
                 value={specificAddress}
                 onChange={(e: any) => setSpecificAddress(e.target.value)}
               />
               
-              {/* Hiển thị preview địa chỉ */}
-              {receiverInfo.address && (
+              {receiverInfo.address && receiverInfo.address !== "Nhận tại quán" && (
                 <p className="text-xs text-gray-500 italic bg-gray-50 p-2 rounded border border-gray-100">
                   Giao đến: {receiverInfo.address}
                 </p>
               )}
             </div>
-            {/* --- KẾT THÚC KHỐI ĐỊA CHỈ --- */}
 
             {isGift && (
               <InputGroup 
@@ -312,13 +272,13 @@ export const CheckoutForm = () => {
         ) : (
           <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
             <h4 className="font-semibold text-blue-800 mb-1">Địa chỉ cửa hàng:</h4>
-            <p className="text-gray-600 text-sm">123 Đường ABC, Quận XYZ, TP.HCM</p>
+            <p className="text-gray-600 text-sm">198 Phố ABC, Hà Nội</p>
             <p className="text-gray-500 text-xs mt-2 italic">* Vui lòng đến nhận hàng sau khi có thông báo xác nhận đơn hàng.</p>
           </div>
         )}
       </section>
 
-      {/* 3. Thanh toán */}
+      {/* 3. Thanh toán (Giữ nguyên) */}
       <section className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
           <span className="bg-brand-orange/10 text-brand-orange w-6 h-6 rounded-full flex items-center justify-center text-xs">3</span>
@@ -331,6 +291,19 @@ export const CheckoutForm = () => {
           </label>
         </div>
       </section>
+
+      {/* Ghi chú */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+             📝 Ghi chú cho đơn hàng
+          </h3>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Ví dụ: Ít đường, giao vào giờ hành chính, gọi trước khi giao..."
+            className="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-[#c49b63] outline-none min-h-[80px]"
+          />
+       </div>
     </div>
   );
 };

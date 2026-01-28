@@ -1,37 +1,44 @@
+// src/app/(staff)/staff/history/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { FiSearch, FiCalendar, FiFilter, FiDownload } from 'react-icons/fi';
+import React, { useState, useEffect, useCallback } from 'react';
+import { FiSearch, FiFilter, FiDownload, FiLoader } from 'react-icons/fi';
 import classNames from 'classnames';
-
-// --- Types (Nên tách ra file types chung nếu được) ---
-type OrderStatus = 'COMPLETED' | 'CANCELLED';
-
-interface HistoryOrder {
-  id: string;
-  customerName: string;
-  items: string[];
-  total: number;
-  status: OrderStatus;
-  completedAt: string;
-  paymentMethod: 'CASH' | 'BANKING';
-}
-
-// --- Mock Data ---
-const MOCK_HISTORY: HistoryOrder[] = [
-  { id: 'ORD-001', customerName: 'Nguyễn Văn A', items: ['2x Bạc Xỉu', '1x Bánh Mì'], total: 95000, status: 'COMPLETED', completedAt: '10:30 05/01/2026', paymentMethod: 'BANKING' },
-  { id: 'ORD-002', customerName: 'Trần Thị B', items: ['1x Trà Đào'], total: 45000, status: 'COMPLETED', completedAt: '09:15 05/01/2026', paymentMethod: 'CASH' },
-  { id: 'ORD-003', customerName: 'Lê C', items: ['1x Espresso'], total: 35000, status: 'CANCELLED', completedAt: '08:45 05/01/2026', paymentMethod: 'CASH' },
-  { id: 'ORD-004', customerName: 'Phạm D', items: ['3x Latte Đá'], total: 165000, status: 'COMPLETED', completedAt: '08:30 05/01/2026', paymentMethod: 'BANKING' },
-];
+import { getStaffHistoryOrders, StaffHistoryItem } from '@/actions/staff-history'; // Import action vừa tạo
+import { OrderStatus } from '@prisma/client';
 
 export default function StaffHistoryPage() {
+  // --- State ---
+  // Lấy ngày hiện tại format YYYY-MM-DD
+  const today = new Date().toISOString().split('T')[0];
+  
   const [searchTerm, setSearchTerm] = useState('');
-  const [dateFilter, setDateFilter] = useState('2026-01-05');
+  const [dateFilter, setDateFilter] = useState(today);
+  
+  const [historyData, setHistoryData] = useState<StaffHistoryItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Logic lọc đơn giản
-  const filteredHistory = MOCK_HISTORY.filter(order => 
-    order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  // --- Fetch Data ---
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getStaffHistoryOrders(dateFilter);
+      setHistoryData(data);
+    } catch (error) {
+      console.error("Failed to load history:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [dateFilter]);
+
+  // Gọi fetch khi component mount hoặc dateFilter thay đổi
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // --- Filter Logic (Client-side search on fetched data) ---
+  const filteredHistory = historyData.filter(order => 
+    order.displayId.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.customerName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -71,8 +78,11 @@ export default function StaffHistoryPage() {
 
         {/* Actions */}
         <div className="flex gap-2 w-full md:w-auto">
-            <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex-1 md:flex-none justify-center">
-                <FiFilter /> Lọc nâng cao
+            <button 
+                onClick={fetchData} // Nút refresh dữ liệu thủ công
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex-1 md:flex-none justify-center"
+            >
+                <FiFilter /> Làm mới
             </button>
             <button className="flex items-center gap-2 px-4 py-2 border border-[#c49b63] text-[#c49b63] rounded-lg text-sm font-medium hover:bg-[#c49b63]/5 transition-colors flex-1 md:flex-none justify-center">
                 <FiDownload /> Xuất Excel
@@ -81,84 +91,96 @@ export default function StaffHistoryPage() {
       </div>
 
       {/* Table Content */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-                <thead>
-                    <tr className="bg-gray-50/50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-100">
-                        <th className="px-6 py-4 font-semibold">Mã đơn</th>
-                        <th className="px-6 py-4 font-semibold">Khách hàng</th>
-                        <th className="px-6 py-4 font-semibold">Món đã gọi</th>
-                        <th className="px-6 py-4 font-semibold">Tổng tiền</th>
-                        <th className="px-6 py-4 font-semibold">Thanh toán</th>
-                        <th className="px-6 py-4 font-semibold">Trạng thái</th>
-                        <th className="px-6 py-4 font-semibold">Thời gian</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50 text-sm">
-                    {filteredHistory.length > 0 ? (
-                        filteredHistory.map((item) => (
-                            <tr key={item.id} className="hover:bg-amber-50/10 transition-colors group">
-                                <td className="px-6 py-4 font-bold text-[#c49b63]">
-                                    {item.id}
-                                </td>
-                                <td className="px-6 py-4 font-medium text-gray-800">
-                                    {item.customerName}
-                                </td>
-                                <td className="px-6 py-4 text-gray-600">
-                                    <p className="truncate max-w-[200px]" title={item.items.join(', ')}>
-                                        {item.items.join(', ')}
-                                    </p>
-                                </td>
-                                <td className="px-6 py-4 font-bold text-gray-800">
-                                    {item.total.toLocaleString('vi-VN')}đ
-                                </td>
-                                <td className="px-6 py-4">
-                                    <span className={classNames(
-                                        "px-2 py-1 rounded border text-xs font-medium",
-                                        item.paymentMethod === 'BANKING' 
-                                            ? "border-blue-200 bg-blue-50 text-blue-600" 
-                                            : "border-green-200 bg-green-50 text-green-600"
-                                    )}>
-                                        {item.paymentMethod}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    {item.status === 'COMPLETED' ? (
-                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                            Hoàn tất
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden min-h-[300px]">
+        {loading ? (
+            <div className="flex flex-col items-center justify-center h-64 text-gray-400 gap-3">
+                <FiLoader className="animate-spin text-3xl text-[#c49b63]" />
+                <p className="text-sm">Đang tải dữ liệu...</p>
+            </div>
+        ) : (
+            <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-gray-50/50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-100">
+                            <th className="px-6 py-4 font-semibold">Mã đơn</th>
+                            <th className="px-6 py-4 font-semibold">Khách hàng</th>
+                            <th className="px-6 py-4 font-semibold">Món đã gọi</th>
+                            <th className="px-6 py-4 font-semibold">Tổng tiền</th>
+                            {/* <th className="px-6 py-4 font-semibold">Thanh toán</th> */}
+                            <th className="px-6 py-4 font-semibold">Trạng thái</th>
+                            <th className="px-6 py-4 font-semibold">Thời gian</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50 text-sm">
+                        {filteredHistory.length > 0 ? (
+                            filteredHistory.map((item) => (
+                                <tr key={item.id} className="hover:bg-amber-50/10 transition-colors group">
+                                    <td className="px-6 py-4 font-bold text-[#c49b63]">
+                                        {item.displayId}
+                                    </td>
+                                    <td className="px-6 py-4 font-medium text-gray-800">
+                                        {item.customerName}
+                                    </td>
+                                    <td className="px-6 py-4 text-gray-600">
+                                        <div className="flex flex-col gap-1">
+                                            {item.items.map((prod, idx) => (
+                                                <span key={idx} className="block truncate max-w-[250px]" title={prod}>• {prod}</span>
+                                            ))}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 font-bold text-gray-800">
+                                        {item.total.toLocaleString('vi-VN')}đ
+                                    </td>
+                                    {/* Cột Payment Method - Uncomment nếu cần logic hiển thị Payment */}
+                                    {/* <td className="px-6 py-4">
+                                        <span className={classNames(
+                                            "px-2 py-1 rounded border text-xs font-medium",
+                                            item.paymentMethod.includes('BANKING') 
+                                                ? "border-blue-200 bg-blue-50 text-blue-600" 
+                                                : "border-green-200 bg-green-50 text-green-600"
+                                        )}>
+                                            {item.paymentMethod}
                                         </span>
-                                    ) : (
-                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                                            Đã hủy
-                                        </span>
-                                    )}
-                                </td>
-                                <td className="px-6 py-4 text-gray-400 text-xs">
-                                    {item.completedAt}
+                                    </td> */}
+                                    <td className="px-6 py-4">
+                                        {item.status === OrderStatus.COMPLETED ? (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                                Hoàn tất
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                                                Đã hủy
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-4 text-gray-400 text-xs">
+                                        {item.completedAt}
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={7} className="px-6 py-12 text-center text-gray-400">
+                                    Không tìm thấy đơn hàng nào trong ngày {dateFilter}.
                                 </td>
                             </tr>
-                        ))
-                    ) : (
-                        <tr>
-                            <td colSpan={7} className="px-6 py-12 text-center text-gray-400">
-                                Không tìm thấy đơn hàng nào khớp với tìm kiếm.
-                            </td>
-                        </tr>
-                    )}
-                </tbody>
-            </table>
-        </div>
-        
-        {/* Pagination Footer (Static) */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-sm text-gray-500">Hiển thị {filteredHistory.length} kết quả</span>
-            <div className="flex gap-2">
-                <button disabled className="px-3 py-1 border rounded text-sm disabled:opacity-50">Trước</button>
-                <button className="px-3 py-1 border rounded text-sm bg-[#1d150b] text-white border-[#1d150b]">1</button>
-                <button disabled className="px-3 py-1 border rounded text-sm disabled:opacity-50">Sau</button>
+                        )}
+                    </tbody>
+                </table>
             </div>
-        </div>
+        )}
+        
+        {/* Pagination Footer (Có thể phát triển thêm Server Pagination sau này) */}
+        {!loading && filteredHistory.length > 0 && (
+            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+                <span className="text-sm text-gray-500">Hiển thị {filteredHistory.length} kết quả</span>
+                <div className="flex gap-2">
+                    <button disabled className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">Trước</button>
+                    <button className="px-3 py-1 border rounded text-sm bg-[#1d150b] text-white border-[#1d150b]">1</button>
+                    <button disabled className="px-3 py-1 border rounded text-sm disabled:opacity-50 hover:bg-gray-50">Sau</button>
+                </div>
+            </div>
+        )}
       </div>
     </div>
   );

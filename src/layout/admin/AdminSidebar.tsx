@@ -1,7 +1,7 @@
 // src/layout/admin/AdminSidebar.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useTransition } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
@@ -10,6 +10,7 @@ import {
   FiDollarSign, FiFileText, FiLayers
 } from 'react-icons/fi';
 import classNames from 'classnames';
+import { logout } from '@/actions/logout';
 
 interface MenuItem {
   id: string;
@@ -28,8 +29,9 @@ const ADMIN_MENU: MenuItem[] = [
     icon: <FiBox size={20} />,
     children: [
       { id: 'all_products', label: 'Danh sách món', path: '/admin/products' },
+      { id: 'create_product', label: 'Thêm món mới', path: '/admin/create-product' },
       { id: 'categories', label: 'Danh mục', path: '/admin/categories' },
-      { id: 'create_product', label: 'Thêm món mới', path: '/admin/products/create' },
+      { id: 'create_category', label: 'Tạo danh mục', path: '/admin/create-category' },
     ]
   },
   {
@@ -40,6 +42,7 @@ const ADMIN_MENU: MenuItem[] = [
       { id: 'all_users', label: 'Danh sách người dùng', path: '/admin/users' },
     ]
   },
+  { id: 'settings', label: 'Cài đặt', icon: <FiSettings size={20} />, path: '/admin/settings' },
 ];
 
 const SidebarItem = ({ item, level = 0, isOpen, toggleOpen }: { 
@@ -108,8 +111,13 @@ const SidebarItem = ({ item, level = 0, isOpen, toggleOpen }: {
 
 const AdminSidebar = () => {
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({ 'products': true });
+  const [isPending, startTransition] = useTransition();
   const toggleOpen = (id: string) => setOpenItems(prev => ({ ...prev, [id]: !prev[id] }));
-
+  const handleLogout = () => {
+    startTransition(async () => {
+        await logout();
+    });
+  };
   return (
     <aside className="fixed top-0 left-0 w-[260px] h-screen bg-white border-r border-gray-100 shadow-xl shadow-gray-200/50 z-50 flex flex-col font-sans">
       {/* Header Logo */}
@@ -131,7 +139,7 @@ const AdminSidebar = () => {
       </div>
       
       <div className="p-4 border-t border-gray-100 bg-gray-50/30">
-        <button className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+        <button onClick={handleLogout} className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors">
             <FiLogOut size={18} /> <span>Đăng xuất</span>
         </button>
       </div>

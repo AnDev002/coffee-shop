@@ -99,7 +99,7 @@ const Header = () => {
             href="/"
             className="text-2xl font-bold uppercase flex flex-col items-center leading-none group"
           >
-            <span className="text-white text-2xl md:text-3xl font-bold">H</span>
+            <span className="text-white text-2xl md:text-3xl font-bold">N.S</span>
             <span className="text-coffee-primary text-[10px] md:text-sm tracking-[0.2em] group-hover:tracking-[0.3em] transition-all duration-300">
               Coffee
             </span>

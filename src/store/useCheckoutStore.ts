@@ -21,13 +21,14 @@ interface CheckoutState {
   receiverInfo: UserInfo;
   selectedVoucherId: string | null;
   deliveryMethod: DeliveryMethod; // <--- MỚI
-
+  note: string; 
   // Actions
   setBuyerInfo: (info: UserInfo) => void;
   setSenderInfo: (info: UserInfo) => void;
   setReceiverInfo: (info: UserInfo) => void;
   setSelectedVoucher: (id: string | null) => void;
   setDeliveryMethod: (method: DeliveryMethod) => void; // <--- MỚI
+  setNote: (note: string) => void;
 }
 
 export const useCheckoutStore = create<CheckoutState>()(
@@ -36,15 +37,17 @@ export const useCheckoutStore = create<CheckoutState>()(
       // Giá trị mặc định
       buyerInfo: { name: "", phone: "", address: "" },
       senderInfo: { name: "Nguyễn Văn B", relation: "Người tặng", phone: "", address: "" },
-      receiverInfo: { name: "", relation: "Bạn bè", phone: "", email: "", address: "", message: "" },
+      receiverInfo: { name: "", relation: "Bạn bè", phone: "", email: "", address: "", message: "", note: "" },
       selectedVoucherId: null,
       deliveryMethod: 'delivery', // Mặc định là giao hàng
+      note: "",
 
       setBuyerInfo: (info) => set({ buyerInfo: info }),
       setSenderInfo: (info) => set({ senderInfo: info }),
       setReceiverInfo: (info) => set({ receiverInfo: info }),
       setSelectedVoucher: (id) => set({ selectedVoucherId: id }),
       setDeliveryMethod: (method) => set({ deliveryMethod: method }),
+      setNote: (note) => set({ note }),
     }),
     {
       name: 'checkout-storage', 

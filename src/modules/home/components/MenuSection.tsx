@@ -85,15 +85,6 @@ export const MenuSection: React.FC<MenuSectionProps> = ({ categories }) => {
           </div>
         ))}
       </div>
-      
-      {/* View Full Menu Button */}
-      <div className="text-center mt-12">
-          <Link href="/menu">
-            <button className="px-8 py-3 bg-[#c49b63] text-white font-bold uppercase tracking-widest hover:bg-[#b08b55] transition-colors text-sm">
-                View Full Menu
-            </button>
-          </Link>
-      </div>
     </section>
   );
 };
