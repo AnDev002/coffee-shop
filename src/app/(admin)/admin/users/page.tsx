@@ -1,10 +1,11 @@
+// src/app/(admin)/admin/users/page.tsx
 import { db } from "@/lib/db";
 import { User, MoreHorizontal, Shield, ShieldAlert, Minus, Crown, SearchX, ChevronLeft, ChevronRight } from "lucide-react";
 import { Prisma, Role } from "@prisma/client";
-import UserToolbar from "./components/UserToolbar"; //
+import UserToolbar from "./components/UserToolbar";
 import Link from "next/link";
 
-// --- CẤU HÌNH HỆ THỐNG VIP ---
+// ... (Giữ nguyên phần cấu hình VIP_TIERS và getVipStatus) ...
 const VIP_TIERS = [
   { 
     id: "DIAMOND", 
@@ -40,10 +41,8 @@ const VIP_TIERS = [
   },
 ];
 
-// Hàm xác định hạng và tính toán tiến độ
 const getVipStatus = (points: number) => {
   const currentTier = VIP_TIERS.find((t) => points >= t.minPoints) || VIP_TIERS[VIP_TIERS.length - 1];
-  // Tìm tier cao hơn tiếp theo để tính progress (Đảo ngược mảng để tìm mốc lớn hơn)
   const nextTier = [...VIP_TIERS].reverse().find((t) => t.minPoints > points);
 
   let progress = 100;
@@ -75,12 +74,11 @@ export default async function UsersPage(props: UsersPageProps) {
   const roleFilter = searchParams?.role || "ALL";
   const sortOption = searchParams?.sort || "newest";
   const currentPage = Number(searchParams?.page) || 1;
-  const PAGE_SIZE = 10; // Số lượng user mỗi trang
+  const PAGE_SIZE = 10;
 
   // --- 1. Xây dựng Query Prisma ---
   const where: Prisma.UserWhereInput = {};
 
-  // Filter: Search Text
   if (query) {
     where.OR = [
       { fullName: { contains: query } }, 
@@ -89,76 +87,57 @@ export default async function UsersPage(props: UsersPageProps) {
     ];
   }
 
-  // Filter: Role
   if (roleFilter !== "ALL") {
     where.role = roleFilter as Role;
   }
 
-  // Sort: Database level (Cho các trường cơ bản)
   let orderBy: Prisma.UserOrderByWithRelationInput = { createdAt: "desc" };
   if (sortOption === "oldest") {
     orderBy = { createdAt: "asc" };
   }
-  // Lưu ý: Sort VIP sẽ xử lý sau khi fetch vì là dữ liệu tính toán
+  // Nếu sort theo điểm VIP trực tiếp từ DB
+  if (sortOption === "vip_desc") {
+    orderBy = { points: "desc" };
+  } else if (sortOption === "vip_asc") {
+    orderBy = { points: "asc" };
+  }
 
-  // --- 2. Fetch dữ liệu từ DB ---
-  // Chúng ta fetch hết (hoặc giới hạn nếu data quá lớn) để tính điểm chính xác cho việc sort VIP
+  // --- 2. Fetch dữ liệu ---
+  // QUAN TRỌNG: Không cần include orders để tính lại nữa, vì action đã update vào field 'points'
   const rawUsers = await db.user.findMany({
     where,
     orderBy,
-    include: {
-      orders: {
-        where: {
-          orderStatus: "COMPLETED", // Chỉ tính đơn hoàn thành
-          paymentStatus: "PAID",    // Chỉ tính đơn đã thanh toán
-        },
-        select: {
-          totalAmount: true,
-        },
-      },
-    },
+    // Prisma mặc định lấy scalar fields như 'points'
   });
 
-  // --- 3. Map dữ liệu & Tính điểm VIP ---
+  // --- 3. Map dữ liệu ---
   let users = rawUsers.map((user) => {
-    let calculatedPoints = 0;
-
-    // Logic: Chỉ CUSTOMER mới được tính điểm
-    if (user.role === "CUSTOMER") {
-      const totalSpent = user.orders.reduce((acc, order) => {
-        // Chuyển đổi Decimal sang Number an toàn
-        return acc + Number(order.totalAmount); 
-      }, 0);
-      
-      // Quy đổi: 1.000 VNĐ = 1 điểm
-      calculatedPoints = Math.floor(totalSpent / 1000);
-    }
+    // SỬA: Lấy trực tiếp điểm từ Database (được tính ở action admin-orders.ts)
+    // Mặc định là 0 nếu null
+    const calculatedPoints = user.points ?? 0; 
 
     return {
       id: user.id,
       name: user.fullName || user.userName,
       userName: user.userName,
       role: user.role,
-      loyaltyPoints: calculatedPoints,
+      loyaltyPoints: calculatedPoints, // Dùng giá trị thật
       createdAt: user.createdAt,
       phone: user.phoneNumber
     };
   });
 
-  // --- 4. Xử lý Sort In-Memory (Cho VIP Points) ---
-  if (sortOption === "vip_desc") {
-    users.sort((a, b) => b.loyaltyPoints - a.loyaltyPoints);
-  } else if (sortOption === "vip_asc") {
-    users.sort((a, b) => a.loyaltyPoints - b.loyaltyPoints);
-  }
-
-  // --- 5. Phân trang (Pagination) ---
+  // (Optional) Sort in-memory nếu DB sort không đủ phức tạp hoặc cần custom logic
+  // Nhưng với logic mới, ta đã sort trực tiếp ở query Prisma bên trên cho tối ưu.
+  
+  // --- 4. Phân trang ---
   const totalItems = users.length;
   const totalPages = Math.ceil(totalItems / PAGE_SIZE);
   const startIndex = (currentPage - 1) * PAGE_SIZE;
   const paginatedUsers = users.slice(startIndex, startIndex + PAGE_SIZE);
 
   // --- RENDER UI ---
+  // (Phần render giữ nguyên như cũ)
   return (
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-end">
@@ -173,7 +152,6 @@ export default async function UsersPage(props: UsersPageProps) {
         </div>
       </div>
 
-      {/* Toolbar lọc và tìm kiếm */}
       <UserToolbar />
 
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
@@ -195,7 +173,6 @@ export default async function UsersPage(props: UsersPageProps) {
 
                 return (
                   <tr key={user.id} className="hover:bg-gray-50/80 transition-colors group">
-                    {/* Cột 1: User Info */}
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ring-2 ring-white
@@ -217,7 +194,6 @@ export default async function UsersPage(props: UsersPageProps) {
                       </div>
                     </td>
 
-                    {/* Cột 2: Role */}
                     <td className="p-4">
                       {user.role === "ADMIN" ? (
                         <span className="inline-flex items-center gap-1.5 text-red-700 bg-red-50 px-2.5 py-1 rounded-md text-xs font-bold border border-red-100 shadow-sm">
@@ -234,7 +210,6 @@ export default async function UsersPage(props: UsersPageProps) {
                       )}
                     </td>
 
-                    {/* Cột 3: VIP Stats */}
                     <td className="p-4 min-w-[240px]">
                       {isCustomer ? (
                         <div className="flex flex-col gap-2 p-2 rounded-lg border border-transparent hover:bg-gray-50 transition-all">
@@ -247,7 +222,6 @@ export default async function UsersPage(props: UsersPageProps) {
                             </span>
                           </div>
                           
-                          {/* Progress Bar Container */}
                           <div className="relative w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                             <div 
                               className={`h-full rounded-full bg-gradient-to-r ${currentTier.barColor} transition-all duration-1000 ease-out`}
@@ -255,7 +229,6 @@ export default async function UsersPage(props: UsersPageProps) {
                             ></div>
                           </div>
 
-                          {/* Helper Text */}
                           <div className="flex justify-between items-center text-[10px]">
                             <span className="text-gray-400">
                                 {nextTier ? `${progress}% đến hạng sau` : 'Đã đạt đỉnh'}
@@ -276,7 +249,6 @@ export default async function UsersPage(props: UsersPageProps) {
                       )}
                     </td>
 
-                    {/* Cột 4: Created At */}
                     <td className="p-4 text-gray-600 text-sm whitespace-nowrap">
                       {new Date(user.createdAt).toLocaleDateString("vi-VN", {
                           year: 'numeric',
@@ -285,7 +257,6 @@ export default async function UsersPage(props: UsersPageProps) {
                       })}
                     </td>
 
-                    {/* Cột 5: Actions */}
                     <td className="p-4 text-right">
                       <button className="p-2 hover:bg-gray-100 rounded-full text-gray-500 hover:text-indigo-600 transition-colors">
                         <MoreHorizontal size={18} />
@@ -311,7 +282,6 @@ export default async function UsersPage(props: UsersPageProps) {
           </table>
         </div>
 
-        {/* --- PAGINATION CONTROLS --- */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
             <div className="text-xs text-gray-500">

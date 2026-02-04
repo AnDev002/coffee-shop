@@ -1,13 +1,15 @@
 // src/modules/checkout/CheckoutPage.tsx
 'use client'
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import { useSession } from 'next-auth/react'; // <--- 1. THÊM IMPORT NÀY
 
 // Stores
 import { useCartStore, useCartItems, useCartSummary } from '@/store/useCartStore';
 import { useCheckoutStore } from '@/store/useCheckoutStore';
+// import { useUserStore } from '@/store/useUserStore'; // <--- 2. BỎ IMPORT NÀY
 
 // Actions & Components
 import { placeOrder } from '@/actions/order';
@@ -17,8 +19,13 @@ import Breadcrumbs from '@/components/ui/Breadcrumbs';
 
 export const CheckoutPage = () => {
   const router = useRouter();
+  
+  // 3. LẤY USER TỪ SESSION (Thay vì useUserStore)
+  // useSession hook sẽ tự động lấy thông tin người dùng đã đăng nhập từ Cookie/Token
+  const { data: session } = useSession();
+  const user = session?.user; 
+
   const [isProcessing, setIsProcessing] = useState(false);
-  // 1. MỚI: Thêm state để đánh dấu đã đặt hàng thành công
   const [isSuccess, setIsSuccess] = useState(false);
 
   // Data from Stores
@@ -26,8 +33,15 @@ export const CheckoutPage = () => {
   const { totalPrice } = useCartSummary();
   const { clearCart } = useCartStore(); 
   
+  // const { user } = useUserStore(); // <--- 4. KHÔNG DÙNG DÒNG NÀY NỮA
+  
   const { buyerInfo, receiverInfo, senderInfo, deliveryMethod, note } = useCheckoutStore();
   
+  // Debug: Kiểm tra xem user có dữ liệu không
+  useEffect(() => {
+     console.log("Current User form Session:", user);
+  }, [user]);
+
   const validateOrder = () => {
     if (cartItems.length === 0) return "Giỏ hàng đang trống";
     if (!buyerInfo.name || !buyerInfo.phone) return "Vui lòng nhập thông tin người đặt";
@@ -50,6 +64,8 @@ export const CheckoutPage = () => {
       if (receiverInfo.message) {
          finalNote += ` (Lời nhắn thiệp: ${receiverInfo.message})`;
       }
+      
+      console.log("User sending to placeOrder:", user); // Log để check lần cuối
 
       const result = await placeOrder({
         items: cartItems,
@@ -57,39 +73,34 @@ export const CheckoutPage = () => {
         receiverInfo,
         totalAmount: totalPrice,
         deliveryMethod: deliveryMethod,
-        note: finalNote.trim() 
+        note: finalNote.trim(),
+        
+        // 5. QUAN TRỌNG: Truyền ID từ biến user của Session
+        // Đảm bảo user.id tồn tại và ép kiểu về string
+        userId: user?.id ? String(user.id) : undefined 
       });
 
       if (result.success) {
-        // 2. MỚI: Đánh dấu thành công TRƯỚC khi clear cart
         setIsSuccess(true); 
         toast.success("Đặt hàng thành công!");
-        
-        // Clear cart sẽ làm cartItems = [], nhưng nhờ isSuccess = true 
-        // ta sẽ hiển thị màn hình Loading thay vì màn hình Giỏ hàng trống
         clearCart(); 
-        
         router.push(`/thank-you?orderId=${result.orderId}`);
-        // LƯU Ý: Không set setIsProcessing(false) ở đây để giữ hiệu ứng loading
       } else {
         toast.error(result.error || "Có lỗi xảy ra, vui lòng thử lại");
-        setIsProcessing(false); // Chỉ tắt loading khi có lỗi
+        setIsProcessing(false);
       }
     } catch (err) {
       console.error(err);
       toast.error("Lỗi kết nối hệ thống");
       setIsProcessing(false);
     } 
-    // BỎ finally block để tránh tắt loading khi đang redirect thành công
   };
 
-  // 3. MỚI: Màn hình Loading/Skeleton chuyên nghiệp khi đang chuyển trang
-  // Hiển thị khi đang xử lý thành công HOẶC đang xử lý nói chung (nếu muốn che toàn bộ)
+  // 6. UI Loading khi thành công
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center space-y-4">
         <div className="relative w-20 h-20">
-            {/* Hiệu ứng Spinner vòng tròn cam */}
             <div className="absolute top-0 left-0 w-full h-full border-4 border-gray-200 rounded-full"></div>
             <div className="absolute top-0 left-0 w-full h-full border-4 border-brand-orange rounded-full animate-spin border-t-transparent"></div>
         </div>
@@ -101,7 +112,6 @@ export const CheckoutPage = () => {
     );
   }
 
-  // Logic cũ: Chỉ hiển thị Empty khi cart rỗng VÀ không phải đang trong trạng thái success
   if (cartItems.length === 0) {
     return (
       <div className="container mx-auto px-4 py-20 text-center">
@@ -115,7 +125,6 @@ export const CheckoutPage = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen pb-20 relative">
-      {/* Optional: Overlay mờ khi đang processing (nhưng chưa success) */}
       {isProcessing && !isSuccess && (
          <div className="absolute inset-0 bg-white/50 z-50 cursor-not-allowed" />
       )}

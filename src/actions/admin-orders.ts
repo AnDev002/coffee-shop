@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 
 // 1. CẬP NHẬT TYPE: id đổi thành string
 export type OrderWithDetails = {
-  id: string; // <-- Đổi từ number sang string
+  id: string; 
   totalAmount: number;
   paymentStatus: PaymentStatus;
   orderStatus: OrderStatus;
@@ -18,12 +18,14 @@ export type OrderWithDetails = {
   shippingAddress: string | null;
   receiverName: string | null;
   receiverPhone: string | null;
-  userId: number | null;
+  
+  // --- SỬA TẠI ĐÂY ---
+  userId: string | null; // Đổi từ number -> string
   createdAt: Date;
   updatedAt: Date;
 
   user: {
-    id: number;
+    id: string; // Đổi từ number -> string
     userName: string;
     fullName: string | null;
     phoneNumber: string | null;
@@ -128,12 +130,32 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus,
         data: updateData,
       });
 
-      // 2. LOGIC TÍCH ĐIỂM: Chỉ thực hiện khi đơn hàng hoàn thành và có userId
-      if (newStatus === OrderStatus.COMPLETED && updatedOrder.userId) {
-        const amount = Number(updatedOrder.totalAmount);
+      // LOG DEBUG: Kiểm tra dữ liệu ngay sau khi update
+      console.log(`[DEBUG] Order updated: ${updatedOrder.id}, Status: ${newStatus}, UserId: ${updatedOrder.userId}, Total: ${updatedOrder.totalAmount}`);
+
+      // 2. LOGIC TÍCH ĐIỂM: Chỉ thực hiện khi đơn hàng hoàn thành
+      if (newStatus === OrderStatus.COMPLETED) {
+        
+        // Kiểm tra xem đơn hàng có User không
+        if (!updatedOrder.userId) {
+           console.log(`[WARNING] Đơn hàng ${updatedOrder.id} không có User ID. Bỏ qua tích điểm.`);
+           return; 
+        }
+
+        // Chuyển đổi an toàn giá trị tiền tệ từ Decimal/BigInt sang Number
+        const amount = Number(updatedOrder.totalAmount) || 0;
+        
+        if (amount < POINT_CONVERSION_RATE) {
+           console.log(`[INFO] Đơn hàng ${amount} VNĐ nhỏ hơn mức tích điểm tối thiểu (${POINT_CONVERSION_RATE}).`);
+           return;
+        }
+
         const earnedPoints = Math.floor(amount / POINT_CONVERSION_RATE);
 
+        console.log(`[ACTION] Cộng ${earnedPoints} điểm cho User ID: ${updatedOrder.userId} (Tổng tiền: ${amount})`);
+
         // Cập nhật points và totalSpent cho User
+        // Sử dụng updateMany để tránh lỗi nếu user không tồn tại (dù hiếm)
         await tx.user.update({
           where: { id: updatedOrder.userId },
           data: {
@@ -141,15 +163,13 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus,
             totalSpent: { increment: amount }
           }
         });
-        
-        console.log(`✅ Đã cộng ${earnedPoints} điểm cho User ID: ${updatedOrder.userId}`);
       }
     });
     
-    // Revalidate để cập nhật UI ngay lập tức
+    // Revalidate tất cả các path liên quan
     revalidatePath("/admin/orders");
     revalidatePath("/staff/orders");
-    revalidatePath("/admin/users"); 
+    revalidatePath("/admin/users"); // Quan trọng: update lại trang users
     
     return { success: true };
   } catch (error) {

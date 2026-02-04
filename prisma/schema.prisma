@@ -33,7 +33,7 @@ enum PaymentStatus {
 
 // 1. user (Bảng Người dùng)
 model User {
-  id              Int      @id @default(autoincrement())
+  id              String   @id @default(cuid())
   userName        String   @unique @map("user_name") // Tên đăng nhập (email/username)
   passwordHash    String   @map("password_hash")
   role            Role     @default(CUSTOMER)
@@ -124,7 +124,7 @@ model ProductOption {
 model Order {
   id            String        @id
   
-  userId        Int?          @map("user_id") // Nullable cho khách vãng lai
+  userId        String?       @map("user_id") // Nullable cho khách vãng lai
   user          User?         @relation(fields: [userId], references: [id])
   
   totalAmount   Decimal       @map("total_amount")

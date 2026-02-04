@@ -7,7 +7,7 @@ import { UserInfo } from "@/store/useCheckoutStore";
 import { OrderStatus, PaymentStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-// ... (giữ nguyên hàm generateOrderId) ...
+// Hàm tạo mã đơn hàng ngẫu nhiên
 function generateOrderId(length: number = 6): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let result = '';
@@ -24,12 +24,19 @@ interface PlaceOrderParams {
   totalAmount: number;
   deliveryMethod: string;
   note?: string;
-  userId?: number;
+  userId?: string;
 }
 
 export async function placeOrder(data: PlaceOrderParams) {
+  // [DEBUG] 1. In toàn bộ dữ liệu đầu vào nhận được từ Client
+  console.log("==========================================");
+  console.log("🔍 [BE DEBUG] Bắt đầu xử lý placeOrder");
+  console.log("🔍 [BE DEBUG] UserId nhận được:", data.userId, "| Kiểu dữ liệu:", typeof data.userId);
+  console.log("🔍 [BE DEBUG] Tổng tiền:", data.totalAmount);
+  // console.log("🔍 [BE DEBUG] Full Data:", JSON.stringify(data, null, 2)); // Bỏ comment nếu cần soi kỹ
+  console.log("==========================================");
   try {
-    // 1. Validate
+    // 1. Validate dữ liệu đầu vào
     if (!data.buyerInfo.name || !data.buyerInfo.phone) {
       return { success: false, error: "Thiếu thông tin người đặt hàng" };
     }
@@ -38,22 +45,18 @@ export async function placeOrder(data: PlaceOrderParams) {
       return { success: false, error: "Giỏ hàng trống" };
     }
 
-    // --- FIX LOGIC ĐỊA CHỈ ---
+    // 2. Xử lý địa chỉ giao hàng
     let finalShippingAddress = "Nhận tại quán";
     
-    // Nếu client gửi lên method là delivery, bắt buộc phải có địa chỉ
     if (data.deliveryMethod === 'delivery') {
         const inputAddress = data.receiverInfo?.address || "";
-        
-        // Check kỹ: nếu địa chỉ rỗng HOẶC vẫn là "Nhận tại quán" (do lỗi client) -> Báo lỗi
         if (!inputAddress || inputAddress.trim() === "" || inputAddress === "Nhận tại quán") {
              return { success: false, error: "Vui lòng nhập địa chỉ giao hàng đầy đủ." };
         }
         finalShippingAddress = inputAddress;
     } 
-    // Nếu method là pickup thì mặc định là Nhận tại quán
-    // -------------------------
 
+    // 3. Tạo ID đơn hàng unique
     let orderId = generateOrderId();
     let isUnique = false;
     while (!isUnique) {
@@ -62,28 +65,28 @@ export async function placeOrder(data: PlaceOrderParams) {
         else orderId = generateOrderId();
     }
 
-    const newOrder = await db.$transaction(async (tx) => {
+    // 4. TRANSACTION: Tạo Order -> Tạo OrderItem -> Cộng điểm User
+    const result = await db.$transaction(async (tx) => {
+      // 4.1 Tạo Order
       const order = await tx.order.create({
         data: {
           id: orderId,
           customerName: data.buyerInfo.name,
           phoneNumber: data.buyerInfo.phone,
-          
           shippingAddress: finalShippingAddress,
-          note: data.note || "", // Đảm bảo note không bị null
-          
+          note: data.note || "",
           receiverName: data.receiverInfo.name || data.buyerInfo.name,
           receiverPhone: data.receiverInfo.phone || data.buyerInfo.phone,
-
           totalAmount: data.totalAmount,
           paymentStatus: PaymentStatus.UNPAID,
           orderStatus: OrderStatus.PENDING,
           
-          ...(data.userId && { userId: data.userId }),
+          // 2. CẬP NHẬT: Chỉ cần kiểm tra tồn tại, không check type number nữa
+          ...(data.userId ? { userId: data.userId } : {}), 
         },
       });
 
-      // ... (giữ nguyên logic tạo OrderItems) ...
+      // 4.2 Tạo Order Items
       for (const item of data.items) {
         const productIdInt = Number(item.productId); 
         
@@ -107,16 +110,18 @@ export async function placeOrder(data: PlaceOrderParams) {
         }
       }
 
-      return order;
+      return { order, pointsEarned: data.userId ? Math.floor(data.totalAmount / 10000) : 0 };
     });
 
+    // Revalidate lại các trang cần thiết để update dữ liệu mới
     revalidatePath("/admin/orders");
     revalidatePath("/staff/orders");
+    revalidatePath("/admin/users"); // Refresh trang quản lý user để thấy điểm mới
     
     return {
       success: true,
-      orderId: newOrder.id,
-      message: "Đặt hàng thành công!",
+      orderId: result.order.id,
+      message: `Đặt hàng thành công! Bạn nhận được ${result.pointsEarned} điểm.`,
     };
 
   } catch (error) {
