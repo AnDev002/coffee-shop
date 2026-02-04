@@ -1,217 +1,174 @@
-// src/modules/auth/RegisterPage.tsx
 "use client";
 
-import React, { useState, useTransition } from "react";
-import Link from "next/link";
+import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+
 import { RegisterSchema } from "@/schemas";
 import { register } from "@/actions/register";
-import { Loader2 } from "lucide-react";
 
-// --- GIỮ NGUYÊN CÁC HELPER COMPONENTS CŨ ---
-const NavLink = ({ text, href, isActive, width }: { text: string; href: string; isActive: boolean; width: string }) => (
-  <div className="flex flex-col justify-start items-start py-[14px] px-[20px] h-[52px]">
-    <Link 
-      href={href}
-      className={`font-poppins text-[13px] whitespace-nowrap leading-[23.4px] uppercase tracking-[2px] font-normal transition-colors duration-300 ${
-        isActive ? "text-[#c49b63]" : "text-white hover:text-[#c49b63]"
-      }`}
-      style={{ minWidth: width }}
-    >
-      {text}
-    </Link>
-  </div>
-);
-
-const DecorationSquare = ({ isFilled }: { isFilled: boolean }) => (
-  <div className="border-[2px] border-white rounded-[9px] w-[18px] h-[18px] flex justify-center items-center overflow-hidden">
-    <div className={`rounded-[6px] w-[12px] h-[12px] ${isFilled ? "bg-white" : "bg-white/50"}`} />
-  </div>
-);
-
-const NAV_ITEMS = [
-  { text: "Home", href: "/", width: "44px", isActive: false },
-  { text: "Menu", href: "/menu", width: "42px", isActive: false },
-  { text: "Services", href: "/services", width: "73px", isActive: false },
-  { text: "About", href: "/about", width: "51px", isActive: false },
-  { text: "Contact", href: "/contact", width: "75px", isActive: false },
-  { text: "Login", href: "/login", width: "47px", isActive: false },
-  { text: "Register", href: "/register", width: "72px", isActive: true },
-];
-
-const RegisterPage = () => {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+export default function RegisterPage() {
   const [error, setError] = useState<string | undefined>("");
   const [success, setSuccess] = useState<string | undefined>("");
+  const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof RegisterSchema>>({
     resolver: zodResolver(RegisterSchema),
-    defaultValues: { name: "", email: "", password: "" },
+    defaultValues: {
+      email: "",
+      password: "",
+      name: "",
+    },
   });
 
   const onSubmit = (values: z.infer<typeof RegisterSchema>) => {
     setError("");
     setSuccess("");
-    startTransition(async () => {
-      try {
-        const data = await register(values);
+    
+    startTransition(() => {
+      register(values).then((data) => {
         if (data.error) setError(data.error);
-        if (data.success) {
-          setSuccess("Đăng ký thành công! Đang chuyển hướng...");
-          setTimeout(() => router.push("/login"), 1500);
-        }
-      } catch (err) {
-        setError("Lỗi hệ thống.");
-      }
+        if (data.success) setSuccess(data.success);
+      });
     });
   };
 
   return (
-    <div className="flex flex-col w-full bg-white items-center">
+    <div className="flex flex-col w-full bg-white items-center min-h-screen">
       
-      {/* --- HERO & HEADER SECTION (GIỮ NGUYÊN 100% CODE CŨ) --- */}
-      <div className="relative w-full h-[750px] bg-black">
+      {/* --- HERO SECTION --- */}
+      <div className="relative w-full h-[350px] md:h-[500px] bg-black">
+        {/* Background Images */}
         <div className="absolute inset-0 z-0">
-           <img src="/assets/ImageAsset5.png" alt="Background" className="absolute w-full h-full object-cover opacity-60" />
-           <img src="/assets/ImageAsset4.png" alt="Overlay" className="absolute w-full h-full object-cover z-10" />
-           <div className="absolute inset-0 bg-black/50 z-10" />
-           <img src="/assets/ImageAsset3.png" alt="Decoration" className="absolute top-0 right-0 h-full w-auto object-cover z-10 hidden lg:block" />
+           <Image 
+             src="/assets/ImageAsset5.png" 
+             alt="Background" 
+             fill
+             className="object-cover opacity-60"
+             priority
+           />
+           <div className="absolute inset-0 bg-black/40 z-10" />
+           {/* Decorative Side Image */}
+           <div className="absolute top-0 right-0 h-full w-auto z-10 hidden lg:block">
+             <Image src="/assets/ImageAsset3.png" alt="Decoration" width={300} height={800} className="h-full w-auto object-cover" />
+           </div>
         </div>
 
-        <div className="absolute top-0 z-40 w-full border-b border-gray-600 bg-[#151111] shadow-lg">
-          <div className="container mx-auto px-4 lg:px-[15px] h-[79px] flex justify-between items-center">
-            <Link href="/" className="flex flex-col items-start pt-4 pb-1">
-              <span className="font-josefin text-[17px] font-bold text-[#ebcc90] leading-[30px] uppercase">
-                N.S Coffee
-              </span>
-              <span className="font-inter text-[10px] font-thin text-[#f5deb1] uppercase tracking-widest">
-                Delicious Taste
-              </span>
-            </Link>
-            <div className="hidden lg:flex flex-row items-center">
-              {NAV_ITEMS.map((item, index) => (
-                <NavLink key={index} {...item} />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="relative z-20 w-full h-full flex flex-col justify-center items-center pt-20">
-          <span className="font-josefin text-[40px] text-white uppercase tracking-[1px] mb-4">
-            Register
+        {/* Hero Title Content */}
+        <div className="relative z-20 w-full h-full flex flex-col justify-center items-center pt-10">
+          <span className="font-josefin text-4xl md:text-[40px] text-white uppercase tracking-widest mb-4 font-bold shadow-black drop-shadow-lg">
+            Đăng Ký
           </span>
-          <div className="flex gap-4 border-b-2 border-white pb-2">
-            <Link href="/" className="font-poppins text-[13px] text-white uppercase tracking-[1px] font-light hover:text-[#c49b63] transition-colors">
-              Home
+          {/* Breadcrumbs Stylized */}
+          <div className="flex gap-4 border-b border-[#c49b63]/50 pb-2 px-6">
+            <Link href="/" className="font-poppins text-sm text-white/80 uppercase tracking-widest font-light hover:text-[#c49b63] transition-colors">
+              Trang chủ
             </Link>
-            <span className="font-poppins text-[13px] text-[#bfbfbf] uppercase tracking-[1px] font-light">
-              Register
+            <span className="text-[#c49b63]">•</span>
+            <span className="font-poppins text-sm text-[#c49b63] uppercase tracking-widest font-medium">
+              Tạo tài khoản
             </span>
           </div>
         </div>
-
-        <div className="absolute top-[682px] w-full flex justify-center gap-[10px] z-30">
-           <DecorationSquare isFilled={true} />
-           <DecorationSquare isFilled={false} />
-           <DecorationSquare isFilled={false} />
-        </div>
       </div>
 
-      {/* --- REGISTER FORM SECTION (ĐÃ NÂNG CẤP UX) --- */}
-      <div className="relative z-30 -mt-[100px] mb-20 w-full px-4 flex justify-center">
-        <div className="w-full max-w-[1110px] bg-[#030202] p-12 flex flex-col items-center gap-6 shadow-2xl">
+      {/* --- REGISTER FORM SECTION --- */}
+      <div className="relative z-30 -mt-[60px] md:-mt-[100px] mb-20 w-full px-4 flex justify-center">
+        <form 
+          onSubmit={form.handleSubmit(onSubmit)} 
+          className="w-full max-w-[800px] bg-[#030202] p-8 md:p-12 flex flex-col items-center gap-8 shadow-2xl border-t-4 border-[#c49b63]"
+        >
           
-          <div className="w-full pb-1">
-            <h2 className="font-josefin text-[24px] text-white uppercase leading-[33.6px] font-normal">
-              Register
+          <div className="w-full pb-1 text-center">
+            <h2 className="font-josefin text-2xl text-white uppercase leading-snug font-normal tracking-wide">
+              Thông tin cá nhân
             </h2>
+            <p className="text-white/50 text-sm font-light mt-2">Điền thông tin để trở thành thành viên</p>
           </div>
 
-          <form onSubmit={form.handleSubmit(onSubmit)} className="w-full flex flex-col gap-4">
-            {/* Username */}
+          <div className="w-full grid grid-cols-1 gap-6">
+            
+            {/* Input Name */}
             <div className="w-full">
-               <label className="font-poppins text-[15px] font-light text-white leading-[27px] block mb-2">
-                 Username
+               <label className="font-poppins text-[15px] font-light text-white mb-2 block">
+                 Họ và tên
                </label>
-               <div className={`w-full h-[58px] border ${form.formState.errors.name ? 'border-red-500' : 'border-white'} px-4 flex items-center`}>
+               <div className="w-full h-[58px] border border-white/20 focus-within:border-[#c49b63] px-4 flex items-center bg-white/5 transition-all">
                   <input 
                     {...form.register("name")}
+                    disabled={isPending}
                     type="text" 
-                    placeholder="Username" 
-                    className="w-full bg-transparent border-none outline-none text-white font-poppins font-light text-[14px] placeholder-white/40"
+                    placeholder="Nguyễn Văn A" 
+                    className="w-full bg-transparent border-none outline-none text-white font-poppins font-light text-[14px] placeholder-white/30"
                   />
                </div>
-               {form.formState.errors.name && <p className="text-red-500 text-xs mt-1">{form.formState.errors.name.message}</p>}
+               {form.formState.errors.name && <p className="text-red-500 text-xs mt-1 pl-1">{form.formState.errors.name.message}</p>}
             </div>
 
-            {/* Email */}
+            {/* Input Email */}
             <div className="w-full">
-               <label className="font-poppins text-[15px] font-light text-white leading-[27px] block mb-2">
+               <label className="font-poppins text-[15px] font-light text-white mb-2 block">
                  Email
                </label>
-               <div className={`w-full h-[58px] border ${form.formState.errors.email ? 'border-red-500' : 'border-white'} px-4 flex items-center`}>
+               <div className="w-full h-[58px] border border-white/20 focus-within:border-[#c49b63] px-4 flex items-center bg-white/5 transition-all">
                   <input 
                     {...form.register("email")}
+                    disabled={isPending}
                     type="email" 
-                    placeholder="Email" 
-                    className="w-full bg-transparent border-none outline-none text-white font-poppins font-light text-[14px] placeholder-white/40"
+                    placeholder="email@example.com" 
+                    className="w-full bg-transparent border-none outline-none text-white font-poppins font-light text-[14px] placeholder-white/30"
                   />
                </div>
-               {form.formState.errors.email && <p className="text-red-500 text-xs mt-1">{form.formState.errors.email.message}</p>}
+               {form.formState.errors.email && <p className="text-red-500 text-xs mt-1 pl-1">{form.formState.errors.email.message}</p>}
             </div>
 
-            {/* Password */}
+            {/* Input Password */}
             <div className="w-full">
-               <label className="font-poppins text-[15px] font-light text-white leading-[27px] block mb-2">
-                 Password
+               <label className="font-poppins text-[15px] font-light text-white mb-2 block">
+                 Mật khẩu
                </label>
-               <div className={`w-full h-[58px] border ${form.formState.errors.password ? 'border-red-500' : 'border-white'} px-4 flex items-center`}>
+               <div className="w-full h-[58px] border border-white/20 focus-within:border-[#c49b63] px-4 flex items-center bg-white/5 transition-all">
                   <input 
                     {...form.register("password")}
+                    disabled={isPending}
                     type="password" 
-                    placeholder="Password" 
-                    className="w-full bg-transparent border-none outline-none text-white font-poppins font-light text-[14px] placeholder-white/40"
+                    placeholder="******" 
+                    className="w-full bg-transparent border-none outline-none text-white font-poppins font-light text-[14px] placeholder-white/30"
                   />
                </div>
-               {form.formState.errors.password && <p className="text-red-500 text-xs mt-1">{form.formState.errors.password.message}</p>}
+               {form.formState.errors.password && <p className="text-red-500 text-xs mt-1 pl-1">{form.formState.errors.password.message}</p>}
             </div>
 
-            {/* Notifications */}
-            {error && <div className="p-3 bg-red-500/10 text-red-500 text-sm border border-red-500/30">{error}</div>}
-            {success && <div className="p-3 bg-green-500/10 text-green-500 text-sm border border-green-500/30">{success}</div>}
-
-            {/* Links */}
-            <div className="w-full mt-2">
-              <Link href="/login" className="font-poppins text-[15px] font-light text-[#c49b63] leading-[27px] hover:text-[#b08b55] transition-colors">
-                 Already have an Account
-              </Link>
-            </div>
+            {/* Alerts */}
+            {error && <div className="bg-red-900/20 text-red-400 border border-red-900/50 p-3 rounded text-center text-sm font-light">{error}</div>}
+            {success && <div className="bg-green-900/20 text-green-400 border border-green-900/50 p-3 rounded text-center text-sm font-light">{success}</div>}
 
             {/* Submit Button */}
-            <div className="w-full mt-6">
+            <div className="w-full mt-4 flex flex-col gap-4">
                <button 
                 type="submit"
-                disabled={isPending || !!success}
-                className="w-full h-[54px] bg-[#c49b63] border border-[#c49b63] flex items-center justify-center hover:bg-transparent hover:text-[#c49b63] transition-all duration-300 group disabled:opacity-70"
+                disabled={isPending}
+                className="w-full h-[54px] bg-[#c49b63] border border-[#c49b63] flex items-center justify-center hover:bg-transparent hover:text-[#c49b63] transition-all duration-300 group disabled:opacity-50"
                >
-                {isPending ? (
-                   <Loader2 className="animate-spin text-black group-hover:text-[#c49b63]" />
-                ) : (
-                   <span className="font-poppins text-[13px] font-normal text-black leading-[19.5px] group-hover:text-[#c49b63] uppercase">
-                     Register
-                   </span>
-                )}
+                <span className="font-poppins text-[13px] font-bold text-black group-hover:text-[#c49b63] uppercase tracking-widest">
+                  {isPending ? "Đang tạo tài khoản..." : "Đăng Ký Ngay"}
+                </span>
               </button>
+              
+              <div className="flex justify-center items-center gap-2">
+                 <span className="text-white/40 font-light text-sm">Đã có tài khoản?</span>
+                 <Link href="/login" className="font-poppins text-sm font-medium text-[#c49b63] hover:text-[#e0b87e] transition-colors uppercase">
+                    Đăng nhập
+                 </Link>
+              </div>
             </div>
-          </form>
-        </div>
+
+          </div>
+        </form>
       </div>
     </div>
   );
-};
-
-export default RegisterPage;
+}
