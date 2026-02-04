@@ -1,184 +1,202 @@
+// src/modules/auth/LoginPage.tsx
 "use client";
 
-import { useState, useTransition } from "react";
+import React, { useState, useTransition, Suspense } from "react";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image"; // Dùng Image tối ưu của Next.js
-
-import { LoginSchema } from "@/schemas";
+import { useSession } from "next-auth/react";
+import { Loader2, Mail, Lock, AlertCircle } from "lucide-react";
 import { login } from "@/actions/login";
+import { LoginSchema } from "@/schemas";
 
-export default function LoginPage() {
-  const [error, setError] = useState<string | undefined>("");
-  const [isPending, startTransition] = useTransition();
-  
-  const { update } = useSession();
+// --- Input Component (Tái sử dụng style) ---
+const InputField = ({ 
+  icon: Icon, 
+  placeholder, 
+  type = "text", 
+  register, 
+  name, 
+  error,
+  disabled
+}: { 
+  icon: any; 
+  placeholder: string; 
+  type?: string; 
+  register: any; 
+  name: string; 
+  error?: string;
+  disabled: boolean;
+}) => (
+  <div className="w-full">
+    <label className="block text-white/60 text-xs uppercase tracking-wider mb-1.5 ml-1 font-poppins">
+      {placeholder}
+    </label>
+    <div className={`
+      relative flex items-center w-full h-[54px] border transition-all duration-300
+      ${error ? "border-red-500 bg-red-500/5" : "border-white/20 bg-white/5 focus-within:border-[#c49b63] focus-within:bg-black"}
+    `}>
+      <div className="pl-4 pr-3 text-[#c49b63]">
+        <Icon size={18} />
+      </div>
+      <input
+        {...register(name)}
+        type={type}
+        disabled={disabled}
+        placeholder={`Nhập ${placeholder.toLowerCase()}...`}
+        className="w-full bg-transparent border-none outline-none text-white font-poppins font-light text-[14px] placeholder-white/30 h-full pr-4 disabled:opacity-50"
+      />
+    </div>
+    {error && <span className="text-red-500 text-xs mt-1 ml-1 font-light flex items-center gap-1"><AlertCircle size={10} /> {error}</span>}
+  </div>
+);
+
+// --- Login Content Logic ---
+const LoginContent = () => {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl");
+  const { update } = useSession();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | undefined>("");
 
+  const callbackUrl = searchParams.get("callbackUrl");
+  
   const form = useForm<z.infer<typeof LoginSchema>>({
     resolver: zodResolver(LoginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+    defaultValues: { email: "", password: "" },
   });
 
   const onSubmit = (values: z.infer<typeof LoginSchema>) => {
     setError("");
     
-    startTransition(() => {
-      login(values, callbackUrl).then(async (data) => {
+    startTransition(async () => {
+      try {
+        const data = await login(values, callbackUrl);
+
         if (data?.error) {
           setError(data.error);
         }
         
         if (data?.success) {
-           await update();
-           const destination = data.redirectTo || "/";
-           window.location.assign(destination);
+          await update();
+          // Hard reload để cập nhật Header/Session chính xác
+          const destination = data.redirectTo || "/";
+          window.location.assign(destination);
         }
-      });
+      } catch (err) {
+        setError("Đã có lỗi xảy ra. Vui lòng thử lại.");
+      }
     });
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-        e.preventDefault();
-        form.handleSubmit(onSubmit)();
-    }
-  };
-
   return (
-    <div className="flex flex-col items-center justify-start w-full bg-white min-h-screen">
-      
-      {/* --- HERO SECTION (Background) --- */}
-      <div className="relative w-full h-[40vh] md:h-[60vh] min-h-[300px] flex justify-center items-center overflow-hidden bg-black">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute top-0 left-0 w-full h-full opacity-50 bg-black/50 z-10" />
-          {/* Background Image */}
-          <div className="absolute top-0 left-0 w-full h-full">
-             <Image 
-                src="/assets/ImageAsset6.png" 
-                alt="Background" 
-                fill
-                className="object-cover opacity-60"
-                priority
-             />
-          </div>
-           {/* Decoration Images */}
-           <div className="absolute top-0 right-0 h-full w-auto z-20 hidden lg:block">
-              <Image src="/assets/ImageAsset3.png" alt="Decoration Right" width={300} height={800} className="h-full w-auto object-cover" />
-           </div>
-           <div className="absolute top-0 left-0 h-full w-auto z-10 hidden lg:block">
-              <Image src="/assets/ImageAsset4.png" alt="Decoration Left" width={300} height={800} className="h-full w-auto object-cover" />
-           </div>
-        </div>
+    <div className="relative z-10 w-full max-w-[450px] flex flex-col gap-8">
+      {/* Header */}
+      <div className="text-center lg:text-left">
+        <h1 className="font-josefin text-3xl md:text-4xl text-white uppercase mb-2">
+          Chào mừng trở lại
+        </h1>
+        <p className="text-white/50 font-poppins text-sm font-light">
+          Đăng nhập để thưởng thức hương vị tuyệt hảo
+        </p>
       </div>
 
-      {/* --- LOGIN FORM SECTION --- */}
-      <div className="relative z-30 -mt-[80px] md:-mt-[120px] mb-20 flex justify-center w-full px-4">
-        <div 
-          className="w-full max-w-[600px] bg-black p-8 md:p-12 flex flex-col items-center gap-6 shadow-2xl border-t-2 border-[#c49b63]/20"
-          onKeyDown={handleKeyDown}
-        >
-          
-          {/* Title */}
-          <div className="w-full flex flex-col items-center pb-2">
-            <h2 className="font-josefin text-2xl md:text-3xl text-white uppercase leading-tight font-normal tracking-wide">
-              Đăng Nhập
-            </h2>
-            <p className="text-white/60 text-sm font-poppins mt-2 font-light">
-              Chào mừng bạn quay trở lại!
-            </p>
-          </div>
+      <form 
+        onSubmit={form.handleSubmit(onSubmit)} 
+        className="flex flex-col gap-5"
+        onKeyDown={(e) => {
+           if (e.key === "Enter") {
+             e.preventDefault(); 
+             form.handleSubmit(onSubmit)();
+           }
+        }}
+      >
+        <InputField 
+          icon={Mail} 
+          placeholder="Email" 
+          type="email"
+          name="email" 
+          register={form.register} 
+          error={form.formState.errors.email?.message} 
+          disabled={isPending}
+        />
 
-          {/* Form Content */}
-          <div className="w-full flex flex-col items-start gap-5">
-            
-            {/* Email Field */}
-            <div className="w-full">
-              <label className="font-poppins text-sm font-light text-white mb-2 block tracking-wide">
-                Email
-              </label>
-              <div className="w-full h-[54px] border border-white/30 focus-within:border-[#c49b63] px-4 flex items-center transition-colors bg-white/5">
-                 <input 
-                    {...form.register("email")}
-                    disabled={isPending}
-                    type="email" 
-                    placeholder="example@gmail.com"
-                    className="w-full bg-transparent border-none outline-none text-white font-poppins font-light text-sm placeholder-white/30"
-                 />
-              </div>
-              {form.formState.errors.email && (
-                <span className="text-red-500 text-xs mt-1 block font-light">
-                  {form.formState.errors.email.message}
-                </span>
-              )}
-            </div>
-
-            {/* Password Field */}
-            <div className="w-full">
-              <label className="font-poppins text-sm font-light text-white mb-2 block tracking-wide">
-                Mật khẩu
-              </label>
-              <div className="w-full h-[54px] border border-white/30 focus-within:border-[#c49b63] px-4 flex items-center transition-colors bg-white/5">
-                 <input 
-                    {...form.register("password")}
-                    disabled={isPending}
-                    type="password" 
-                    placeholder="******"
-                    className="w-full bg-transparent border-none outline-none text-white font-poppins font-light text-sm placeholder-white/30"
-                 />
-              </div>
-               {form.formState.errors.password && (
-                <span className="text-red-500 text-xs mt-1 block font-light">
-                  {form.formState.errors.password.message}
-                </span>
-              )}
-            </div>
-
-            {/* Error Message */}
-            {error && (
-                <div className="w-full bg-red-500/10 border border-red-500/50 p-3 rounded text-red-400 text-sm text-center font-light">
-                    {error}
-                </div>
-            )}
-
-            {/* Links */}
-            <div className="w-full flex flex-col sm:flex-row justify-between items-center gap-3 mt-1">
-              <Link href="#" className="font-poppins text-sm font-light text-[#c49b63] hover:text-[#e0b87e] transition-colors">
-                Quên mật khẩu?
-              </Link>
-              <div className="flex items-center gap-2">
-                <span className="text-white/40 text-sm font-light">Chưa có tài khoản?</span>
-                <Link href="/register" className="font-poppins text-sm font-medium text-[#c49b63] hover:text-[#e0b87e] transition-colors uppercase">
-                  Đăng ký
-                </Link>
-              </div>
-            </div>
-
-            {/* Login Button */}
-            <div className="w-full mt-4">
-              <button 
-                type="button"
-                onClick={form.handleSubmit(onSubmit)}
-                disabled={isPending}
-                className="w-full h-[54px] bg-[#c49b63] border border-[#c49b63] flex items-center justify-center hover:bg-transparent hover:text-[#c49b63] transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span className="font-poppins text-sm font-medium text-black group-hover:text-[#c49b63] uppercase tracking-wider">
-                  {isPending ? "Đang xử lý..." : "Đăng nhập ngay"}
-                </span>
-              </button>
-            </div>
-
+        <div className="flex flex-col gap-1">
+          <InputField 
+            icon={Lock} 
+            placeholder="Mật khẩu" 
+            type="password"
+            name="password" 
+            register={form.register} 
+            error={form.formState.errors.password?.message} 
+            disabled={isPending}
+          />
+          <div className="flex justify-end mt-1">
+            <Link href="#" className="text-xs text-[#c49b63] hover:text-white transition-colors font-light">
+              Quên mật khẩu?
+            </Link>
           </div>
         </div>
+
+        {error && (
+          <div className="p-3 rounded bg-red-500/10 border border-red-500/20 text-red-500 text-sm flex items-center gap-2">
+            <AlertCircle size={16} /> {error}
+          </div>
+        )}
+
+        <button 
+          type="button" // Để chặn submit mặc định, xử lý qua onClick hoặc onKeyDown
+          onClick={form.handleSubmit(onSubmit)}
+          disabled={isPending}
+          className="w-full h-[54px] bg-[#c49b63] hover:bg-[#b08b55] disabled:opacity-70 disabled:cursor-not-allowed text-[#0c111d] font-medium font-poppins uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 mt-4 shadow-lg shadow-[#c49b63]/20"
+        >
+          {isPending ? <Loader2 className="animate-spin" size={20} /> : "Đăng nhập"}
+        </button>
+      </form>
+
+      <div className="text-center mt-4 border-t border-white/10 pt-6">
+          <p className="text-white/40 font-poppins text-sm font-light">
+            Chưa có tài khoản?{" "}
+            <Link href="/register" className="text-[#c49b63] hover:underline font-normal transition-colors">
+              Đăng ký ngay
+            </Link>
+          </p>
       </div>
     </div>
   );
-}
+};
+
+const LoginPage = () => {
+  return (
+    <div className="min-h-screen w-full flex bg-[#0c111d] font-sans">
+      {/* --- LEFT SIDE: IMAGE --- */}
+      <div className="hidden lg:flex w-1/2 relative overflow-hidden items-center justify-center bg-black">
+        <div className="absolute inset-0 bg-black/50 z-10" />
+        <img 
+          src="/assets/ImageAsset6.png" // Dùng ảnh có sẵn
+          alt="Coffee Moment" 
+          className="absolute inset-0 w-full h-full object-cover opacity-80"
+        />
+        {/* Decorative Lines */}
+        <div className="absolute top-10 left-10 w-[calc(100%-80px)] h-[calc(100%-80px)] border border-white/20 z-20 pointer-events-none" />
+      </div>
+
+      {/* --- RIGHT SIDE: CONTENT --- */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative">
+        {/* Mobile Background */}
+        <div className="absolute inset-0 lg:hidden z-0">
+             <img src="/assets/ImageAsset6.png" className="w-full h-full object-cover opacity-20" />
+             <div className="absolute inset-0 bg-[#0c111d]/90" />
+        </div>
+        
+        {/* Suspense để tránh lỗi useSearchParams trong Next.js App Router */}
+        <Suspense fallback={<div className="text-[#c49b63]"><Loader2 className="animate-spin" /></div>}>
+          <LoginContent />
+        </Suspense>
+      </div>
+    </div>
+  );
+};
+
+export default LoginPage;

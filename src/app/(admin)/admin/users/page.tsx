@@ -4,7 +4,7 @@ import { User, MoreHorizontal, Shield, ShieldAlert, Minus, Crown, SearchX, Chevr
 import { Prisma, Role } from "@prisma/client";
 import UserToolbar from "./components/UserToolbar";
 import Link from "next/link";
-
+import UserActions from "./components/UserActions";
 // ... (Giữ nguyên phần cấu hình VIP_TIERS và getVipStatus) ...
 const VIP_TIERS = [
   { 
@@ -258,9 +258,9 @@ export default async function UsersPage(props: UsersPageProps) {
                     </td>
 
                     <td className="p-4 text-right">
-                      <button className="p-2 hover:bg-gray-100 rounded-full text-gray-500 hover:text-indigo-600 transition-colors">
-                        <MoreHorizontal size={18} />
-                      </button>
+                      <td className="p-4 text-right">
+                        <UserActions user={user} />
+                      </td>
                     </td>
                   </tr>
                 );

@@ -85,6 +85,10 @@ export async function getAdminOrders(status?: OrderStatus, searchId?: string) {
     const formattedOrders = rawOrders.map((order) => ({
       ...order,
       totalAmount: Number(order.totalAmount),
+      user: order.user ? {
+        ...order.user,
+        totalSpent: Number(order.user.totalSpent) // Chuyển Decimal -> Number
+      } : null,
       orderItems: order.orderItems.map((item) => ({
         ...item,
         unitPrice: Number(item.unitPrice),

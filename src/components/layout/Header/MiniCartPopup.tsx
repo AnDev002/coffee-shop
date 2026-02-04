@@ -31,7 +31,7 @@ const MiniCartPopup = () => {
             </div>
             <p className="text-gray-500 text-sm font-medium">Giỏ hàng của bạn đang trống</p>
             <Link href="/products" className="px-5 py-2 bg-gray-900 text-white rounded-full text-sm hover:bg-gray-800 transition-colors">
-              Tiếp tục mua sắm
+              Tiếp tục đặt món
             </Link>
           </div>
         ) : (
